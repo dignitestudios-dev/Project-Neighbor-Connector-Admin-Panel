@@ -28,16 +28,16 @@ export default function DashboardPage() {
      
 
       <Card className="p-4">
-        <h2 className="text-sm text-gray-500">Total Themes</h2>
+        <h2 className="text-sm text-gray-500">Total Circle</h2>
         <p className="text-xl font-bold">{stats?.totalCircle || 0}</p>
       </Card>
 
       <Card className="p-4">
-        <h2 className="text-sm text-gray-500">Total Check-ins</h2>
+        <h2 className="text-sm text-gray-500">Total Check In</h2>
         <p className="text-xl font-bold">{stats?.totalCheckIn || 0}</p>
       </Card>
       <Card className="p-4">
-        <h2 className="text-sm text-gray-500">Total Check-outs</h2>
+        <h2 className="text-sm text-gray-500">Total Check Out</h2>
         <p className="text-xl font-bold">{stats?.totalCheckOut || 0}</p>
       </Card>
 
