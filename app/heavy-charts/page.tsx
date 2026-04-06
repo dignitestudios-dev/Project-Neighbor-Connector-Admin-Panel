@@ -1,118 +1,74 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface ChartData {
-  name: string;
-  value1: number;
-  value2: number;
-  value3: number;
-  value4: number;
+  date: string;      // API se date
+  users: number;     // API se users
+  posts: number;     // API se posts
+  circles: number;   // API se circles
 }
 
-export default function HeavyChartsPage() {
-  const [data, setData] = useState<ChartData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface HeavyChartsPageProps {
+  charts: ChartData[];
+  loading: boolean;
+}
 
-  useEffect(() => {
-    // Simulate heavy chart data generation
-    const generateChartData = () => {
-      const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-      ];
-      
-      return months.map((name, idx) => ({
-        name,
-        value1: Math.floor(Math.random() * 10000) + 1000,
-        value2: Math.floor(Math.random() * 10000) + 1000,
-        value3: Math.floor(Math.random() * 10000) + 1000,
-        value4: Math.floor(Math.random() * 10000) + 1000,
-      }));
-    };
-
-    // Simulate network delay
-    setTimeout(() => {
-      setData(generateChartData());
-      setIsLoading(false);
-    }, 2500);
-  }, []);
-
-  if (isLoading) {
+export default function HeavyChartsPage({ charts, loading }: HeavyChartsPageProps) {
+  console.log("chats", charts);
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-lg text-gray-500">Loading heavy charts...</p>
+      <div className="flex items-center justify-center h-64">
+        <p className="text-lg text-gray-500">Loading charts...</p>
       </div>
     );
   }
 
+  if (!charts || charts.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500">No chart data available</p>
+      </div>
+    );
+  }
   return (
     <div className="w-full space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Line Chart</CardTitle>
-          <CardDescription>Multi-line chart with heavy rendering</CardDescription>
+          <CardTitle>Dashboard Trends</CardTitle>
+          <CardDescription>Users, Posts & Circles over time</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="value1" stroke="#3b82f6" />
-              <Line type="monotone" dataKey="value2" stroke="#ef4444" />
-              <Line type="monotone" dataKey="value3" stroke="#10b981" />
-              <Line type="monotone" dataKey="value4" stroke="#f59e0b" />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Bar Chart</CardTitle>
-          <CardDescription>Multi-bar chart comparison</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="value1" fill="#3b82f6" />
-              <Bar dataKey="value2" fill="#ef4444" />
-              <Bar dataKey="value3" fill="#10b981" />
-              <Bar dataKey="value4" fill="#f59e0b" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Area Chart</CardTitle>
-          <CardDescription>Stacked area chart</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Area type="monotone" dataKey="value1" stackId="1" fill="#3b82f6" />
-              <Area type="monotone" dataKey="value2" stackId="1" fill="#ef4444" />
-              <Area type="monotone" dataKey="value3" stackId="1" fill="#10b981" />
-              <Area type="monotone" dataKey="value4" stackId="1" fill="#f59e0b" />
-            </AreaChart>
-          </ResponsiveContainer>
+       <ResponsiveContainer width="95%" height={400}>
+  <LineChart
+    data={charts.map(item => ({
+      ...item,
+      date: new Date(item.date).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+      }), // 07 Apr format
+    }))}
+  >
+    <CartesianGrid strokeDasharray="3 3" />
+    <XAxis dataKey="date" />
+    <YAxis />
+    <Tooltip
+      labelFormatter={(label) =>
+        `Date: ${new Date(label).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })}`
+      }
+    />
+    <Legend />
+    <Line type="monotone" dataKey="users" name="Users" stroke="#3b82f6" />
+    <Line type="monotone" dataKey="posts" name="Posts" stroke="#ef4444" />
+    <Line type="monotone" dataKey="circles" name="Circles" stroke="#10b981" />
+  </LineChart>
+</ResponsiveContainer>
         </CardContent>
       </Card>
     </div>

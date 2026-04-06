@@ -34,6 +34,23 @@ const formatDate = (dateStr?: string): string => {
   }
 };
 
+const formatDateOnly = (timestamp?: number) => {
+  if (!timestamp) return "-";
+  return new Date(timestamp * 1000).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatTimeOnly = (timestamp?: number) => {
+  if (!timestamp) return "-";
+  return new Date(timestamp * 1000).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const MetaItem = ({
   icon: Icon,
   label,
@@ -59,6 +76,8 @@ const PostDetailCard = () => {
   const params = useParams();
   const { id } = params;
   const { postDetail, comments } = useSelector((state: RootState) => state.posts);
+
+  console.log("postDetail", postDetail);
   useEffect(() => {
     if (id) {
       const postId = Array.isArray(id) ? id[0] : id;
@@ -79,7 +98,7 @@ useEffect(() => {
 }
 }, [postDetail, id, dispatch])
 
-console.log("postDetail",postDetail?.circle[0].name);
+
   // ✅ Delete handler
   const handleDelete = async () => {
     if (!id) return;
@@ -152,8 +171,17 @@ console.log("postDetail",postDetail?.circle[0].name);
 
           {/* Meta */}
           <div className="grid grid-cols-2 gap-2.5">
-            <MetaItem label="Date" icon={CalendarDays} value={postDetail?.date} />
-            <MetaItem label="Time" icon={Clock} value={postDetail?.time} />
+            <MetaItem
+  label="Date"
+  icon={CalendarDays}
+  value={formatDateOnly(postDetail?.dateTime)}
+/>
+
+<MetaItem
+  label="Time"
+  icon={Clock}
+  value={formatTimeOnly(postDetail?.dateTime)}
+/>
             <MetaItem label="Frequency" icon={RefreshCw} value={postDetail?.frequency} />
             <MetaItem
               label="Occurrence"

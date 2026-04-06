@@ -36,6 +36,7 @@ export default function IdPage() {
     loading,
     posts,
     members,
+    adminloading,
     membersLoading,
     postsLoading,
   } = useSelector((state: RootState) => state.circles);
@@ -220,49 +221,59 @@ export default function IdPage() {
 
                         {/* RIGHT */}
                         <div className="flex items-center gap-3">
-                          <label className="flex items-center cursor-pointer">
-                            <div className="relative">
-                              <input
-                                type="checkbox"
-                                className="sr-only"
-                                checked={user?.isAdmin}
-                                disabled={membersLoading}
-                                onChange={async () => {
-                                  try {
-                                    const circleId = Array.isArray(id) ? id[0] : id;
-                                    const userId = user?.user?._id;
-                                    if (!circleId || !userId) return;
-                                    await dispatch(
-                                      toggleCircleAdminThunk({
-                                        id: circleId,
-                                        userId: userId,
-                                        toggle: !user?.isAdmin,
-                                      }),
-                                    ).unwrap();
+                          <label
+  className={`flex items-center ${
+    adminloading ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+  }`}
+>
+  <div
+    className={`relative ${
+      adminloading ? "pointer-events-none" : ""
+    }`}
+  >
+    <input
+      type="checkbox"
+      className="sr-only"
+      checked={user?.isAdmin}
+      disabled={adminloading}
+      onChange={async () => {
+        if (adminloading) return; // extra safety
 
-                                    dispatch(fetchCircleMembers(circleId));
-                                  } catch (err) {
-                                    console.error("Toggle failed:", err);
-                                  }
-                                }}
-                              />
+        try {
+          const circleId = Array.isArray(id) ? id[0] : id;
+          const userId = user?.user?._id;
+          if (!circleId || !userId) return;
 
-                              <div
-                                className={`w-10 h-4 rounded-full shadow-inner ${
-                                  user?.isAdmin ? "bg-green-300" : "bg-gray-300"
-                                }`}
-                              ></div>
+          await dispatch(
+            toggleCircleAdminThunk({
+              id: circleId,
+              userId: userId,
+              toggle: !user?.isAdmin,
+            })
+          ).unwrap();
 
-                              <div
-                                className={`dot absolute w-6 h-6 rounded-full shadow -left-1 -top-1 transition-all ${
-                                  user?.isAdmin
-                                    ? "translate-x-full bg-green-600"
-                                    : "bg-gray-400"
-                                }`}
-                              ></div>
-                            </div>
-                          </label>
+          dispatch(fetchCircleMembers(circleId));
+        } catch (err) {
+          console.error("Toggle failed:", err);
+        }
+      }}
+    />
 
+    <div
+      className={`w-10 h-4 rounded-full shadow-inner ${
+        user?.isAdmin ? "bg-green-300" : "bg-gray-300"
+      }`}
+    ></div>
+
+    <div
+      className={`dot absolute w-6 h-6 rounded-full shadow -left-1 -top-1 transition-all ${
+        user?.isAdmin
+          ? "translate-x-full bg-green-600"
+          : "bg-gray-400"
+      }`}
+    ></div>
+  </div>
+</label>
                           <button
                             onClick={() => {
                               const circleId = Array.isArray(id) ? id[0] : id;
@@ -336,11 +347,16 @@ export default function IdPage() {
             <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
               <div>
                 <p>Date</p>
-                <p className="font-medium">{post.date || "—"}</p>
+                <p className="font-medium">  {post.updatedAt ? new Date(post.updatedAt).toLocaleString() : "—"}</p>
+              </div>
+
+              <div>
+                <p>Cycles</p>
+                <p className="font-medium">{post.cycles ?? 0}</p>
               </div>
               <div>
-                <p>Time</p>
-                <p className="font-medium">{post.time || "—"}</p>
+                <p>Occurrence</p>
+                <p className="font-medium">{post.occurrence || "—"}</p>
               </div>
               <div>
                 <p>Frequency</p>
@@ -348,19 +364,23 @@ export default function IdPage() {
                   {post.frequency || "—"}
                 </p>
               </div>
-              <div>
-                <p>Cycles</p>
-                <p className="font-medium">{post.cycles ?? 0}</p>
-              </div>
-              <div className="col-span-2">
-                <p>Address</p>
-                <p className="font-medium">{post.address || "—"}</p>
-              </div>
+              
+              
               <div>
                 <p>Pinned</p>
                 <p className="font-medium">
                   {post.isPinned ? "Yes" : "No"}
                 </p>
+              </div>
+               <div>
+                <p>Type</p>
+                <p className="font-medium">
+                  {post.type || "—"}
+                </p>
+              </div>
+              <div className="col-span-2">
+                <p>Address</p>
+                <p className="font-medium">{post.address || "—"}</p>
               </div>
             </div>
           </div>

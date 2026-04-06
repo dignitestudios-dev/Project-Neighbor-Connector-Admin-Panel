@@ -16,3 +16,18 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     throw new Error(error.response?.data?.message || "Failed to fetch dashboard stats");
   }
 };
+
+export const getDashboardCharts = async (endDate: string, startDate: string, type: string): Promise<any> => {
+  try {
+    const response = await API.get("/admin/dashboard/graph", {
+      params: {
+        endDate,
+        startDate,
+        type,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to fetch dashboard charts");
+  }
+};
