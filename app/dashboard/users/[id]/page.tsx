@@ -113,8 +113,8 @@ const handleToggleBlock = async () => {
           {userDetail?.name ?? <span className="italic text-gray-400">No name</span>}
         </h1>
         <p className="text-sm text-gray-500">{userDetail?.email}</p>
-        {userDetail?.phone && (
-          <p className="text-sm text-gray-400">{userDetail.phone}</p>
+        {userDetail?.phoneNumber && (
+          <p className="text-sm text-gray-400">{userDetail.phoneNumber}</p>
         )}
       </div>
     </div>
