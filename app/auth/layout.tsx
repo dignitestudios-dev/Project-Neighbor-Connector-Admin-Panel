@@ -21,11 +21,11 @@ export default function RootLayout({
           <div className="relative items-center justify-center  flex z-1">
             {/* <!-- ===== Common Grid Shape Start ===== --> */}
             <GridShape />
-            <div className="flex flex-col items-center max-w-xs">
-              <Logo size={100} color="#ffffff" />
-              <h1 className="text-white text-4xl font-semibold">Admin Panel</h1>
+            <div className="flex flex-col items-center ">
+              <Logo size={200} color="#ffffff" />
+              <h1 className="text-white text-4xl font-semibold">Neighbor Connector</h1>
               <p className="text-center text-gray-400 mt-2">
-                Welcome to the Admin Panel. Please Sign in to Continue.
+                Welcome to the Neighbor Connector Admin Panel. Please Sign in to Continue.
               </p>
             </div>
           </div>

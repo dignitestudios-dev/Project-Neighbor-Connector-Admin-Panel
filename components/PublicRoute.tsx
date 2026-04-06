@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
+import Cookies from 'js-cookie';
 
 interface PublicRouteProps {
   children: React.ReactNode;
@@ -12,14 +13,16 @@ interface PublicRouteProps {
 export function PublicRoute({ children }: PublicRouteProps) {
   const router = useRouter();
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+  const hasToken = Boolean(Cookies.get('authToken'));
+  const authenticated = hasToken || isAuthenticated;
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/dashboard');
+    if (authenticated) {
+      router.replace('/dashboard');
     }
-  }, [isAuthenticated, router]);
+  }, [authenticated, router]);
 
-  if (isAuthenticated) {
+  if (authenticated) {
     return null;
   }
 

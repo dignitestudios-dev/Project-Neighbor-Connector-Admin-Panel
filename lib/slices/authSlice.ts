@@ -1,6 +1,7 @@
 // lib/slices/authSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { login as loginAPI, forgotPassword as forgotPasswordAPI, verifyOTP as verifyOTPAPI , updatePassword as updatePasswordAPI } from '../api/auth.api'; // tumhara API file
+import Cookies from 'js-cookie';
 
 // ------------------ Types ------------------
 export interface User {
@@ -20,8 +21,8 @@ interface AuthState {
 // ------------------ Initial State ------------------
 const initialState: AuthState = {
   user: null,
-  isAuthenticated: true,
-  loading: true,
+  isAuthenticated: false,
+  loading: false,
   error: null,
   email: null,
 };
@@ -85,7 +86,7 @@ const authSlice = createSlice({
             state.isAuthenticated = false;
             state.loading = false;
             state.error = null;
-            cookieStore.delete("authToken");
+          Cookies.remove("authToken");
     },
     setEmail: (state, action: PayloadAction<string>) => {
       state.email = action.payload;

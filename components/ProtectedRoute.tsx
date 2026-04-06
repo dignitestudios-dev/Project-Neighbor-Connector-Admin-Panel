@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
+import Cookies from 'js-cookie';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,15 +13,17 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+  const hasToken = Boolean(Cookies.get('authToken'));
+  const canAccess = hasToken || isAuthenticated;
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
+    if (!canAccess) {
+      router.replace('/auth/login');
     }
-  }, [isAuthenticated, router]);
+  }, [canAccess, router]);
 
-  if (!isAuthenticated) {
-    return null; // or a loading spinner
+  if (!canAccess) {
+    return null;
   }
 
   return <>{children}</>;
