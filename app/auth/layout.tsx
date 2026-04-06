@@ -17,14 +17,14 @@ export default function RootLayout({
           {children}
         </div>
         {/* Right side - Brand */}
-        <div className="lg:w-1/2 w-full h-full bg-slate-600 lg:grid items-center hidden">
+        <div className="lg:w-1/2 w-full h-full bg-white lg:grid items-center hidden">
           <div className="relative items-center justify-center  flex z-1">
             {/* <!-- ===== Common Grid Shape Start ===== --> */}
             <GridShape />
             <div className="flex flex-col items-center ">
               <Logo size={200} color="#ffffff" />
-              <h1 className="text-white text-4xl font-semibold">Neighbor Connector</h1>
-              <p className="text-center text-gray-400 mt-2">
+              {/* <h1 className="text-black text-4xl font-semibold">Neighbor Connector</h1> */}
+              <p className="text-center text-gray-800 mt-2">
                 Welcome to the Neighbor Connector Admin Panel. Please Sign in to Continue.
               </p>
             </div>
