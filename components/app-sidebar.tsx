@@ -17,6 +17,10 @@ import {
   Users,
   BarChart3,
   Zap,
+  FileText,
+  Circle,
+  CircleUserRound,
+  Group,
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
@@ -34,6 +38,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import Image from "next/image";
 
 const data = {
   user: {
@@ -55,173 +60,34 @@ const data = {
     {
       label: "Apps",
       items: [
-        {
-          title: "Mail",
-          url: "/mail",
-          icon: Mail,
-        },
-        {
-          title: "Tasks",
-          url: "/tasks",
-          icon: CheckSquare,
-        },
-        {
-          title: "Chat",
-          url: "/chat",
-          icon: MessageCircle,
-        },
-        {
-          title: "Calendar",
-          url: "/calendar",
-          icon: Calendar,
-        },
+        
         {
           title: "Users",
           url: "/dashboard/users",
           icon: Users,
         },
         {
-          title: "Test Progress Bar",
-          url: "/test-progress",
-          icon: Zap,
-        },
-      ],
-    },
-    {
-      label: "Heavy Pages",
-      items: [
-        {
-          title: "Heavy Data",
-          url: "/heavy-data",
+          title: "Notifications",
+          url: "/dashboard/Notification",
           icon: BarChart3,
         },
         {
-          title: "Heavy Charts",
-          url: "/heavy-charts",
-          icon: BarChart3,
-        },
-      ],
-    },
-    {
-      label: "Pages",
-      items: [
-        {
-          title: "Landing",
-          url: "/landing",
-          target: "_blank",
-          icon: LayoutTemplate,
+          title: "Circles",
+          url: "/dashboard/circles",
+          icon: Group,
         },
         {
-          title: "Auth Pages",
-          url: "#",
-          icon: Shield,
-          items: [
-            {
-              title: "Sign In 1",
-              url: "/sign-in",
-            },
-            {
-              title: "Sign In 2",
-              url: "/sign-in-2",
-            },
-            {
-              title: "Sign In 3",
-              url: "/sign-in-3",
-            },
-            {
-              title: "Sign Up 1",
-              url: "/sign-up",
-            },
-            {
-              title: "Sign Up 2",
-              url: "/sign-up-2",
-            },
-            {
-              title: "Sign Up 3",
-              url: "/sign-up-3",
-            },
-            {
-              title: "Forgot Password 1",
-              url: "/forgot-password",
-            },
-            {
-              title: "Forgot Password 2",
-              url: "/forgot-password-2",
-            },
-            {
-              title: "Forgot Password 3",
-              url: "/forgot-password-3",
-            },
-          ],
+          title: "Posts",
+          url: "/dashboard/post",
+          icon: FileText,
         },
+        
         {
-          title: "Errors",
-          url: "#",
-          icon: AlertTriangle,
-          items: [
-            {
-              title: "Unauthorized",
-              url: "/errors/unauthorized",
-            },
-            {
-              title: "Forbidden",
-              url: "/errors/forbidden",
-            },
-            {
-              title: "Not Found",
-              url: "/errors/not-found",
-            },
-            {
-              title: "Internal Server Error",
-              url: "/errors/internal-server-error",
-            },
-            {
-              title: "Under Maintenance",
-              url: "/errors/under-maintenance",
-            },
-          ],
-        },
-        {
-          title: "Settings",
-          url: "#",
-          icon: Settings,
-          items: [
-            {
-              title: "User Settings",
-              url: "/settings/user",
-            },
-            {
-              title: "Account Settings",
-              url: "/settings/account",
-            },
-            {
-              title: "Plans & Billing",
-              url: "/settings/billing",
-            },
-            {
-              title: "Appearance",
-              url: "/settings/appearance",
-            },
-            {
-              title: "Notifications",
-              url: "/settings/notifications",
-            },
-            {
-              title: "Connections",
-              url: "/settings/connections",
-            },
-          ],
-        },
-        {
-          title: "FAQs",
-          url: "/faqs",
-          icon: HelpCircle,
-        },
-        {
-          title: "Pricing",
-          url: "/pricing",
-          icon: CreditCard,
-        },
+          title: "Reports",
+          url: "/dashboard/Reports",
+          icon: FileText,
+        }
+        
       ],
     },
   ],
@@ -249,13 +115,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Logo size={24} className="text-current" />
+                <div className="flex  aspect-square  items-center justify-center   ">
+                  <Image src="/images/Logo.png" alt="Logo" width={124} height={124} />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Next js</span>
-                  <span className="truncate text-xs">Admin Dashboard</span>
-                </div>
+                
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

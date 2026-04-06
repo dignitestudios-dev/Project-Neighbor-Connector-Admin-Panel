@@ -4,12 +4,18 @@ import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useDispatch, useSelector } from "react-redux";
+import { verifyOTP } from "@/lib/slices/authSlice";
+import { AppDispatch, RootState } from "@/lib/store";
+
 
 const Verification = () => {
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [otp, setOtp] = useState(["", "", "", ""]);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const { email } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
-
+  console.log("email", email);
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     index: number
@@ -61,14 +67,15 @@ const Verification = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const otpCode = otp.join("");
 
-    if (otpCode.length === 6) {
+    if (otpCode.length === 4) {
       // Verify OTP logic here
       console.log("OTP submitted:", otpCode);
       // Redirect to password reset page or dashboard
+      await dispatch(verifyOTP({ otp: otpCode, email:email || "" })).unwrap();
       router.push("/auth/reset-password");
     }
   };

@@ -4,35 +4,34 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import {
-  fetchUsers,
-  fetchUserById,
-  fetchUserPosts,
-  fetchUserEmergencyContacts,
-  fetchUserReported,
-  fetchUserReports,
-} from "@/lib/slices/userSlice";
+  fetchPosts,
+  fetchPostById,
+} from "@/lib/slices/postSlice";
 
 import { RootState, AppDispatch } from "@/lib/store";
-import { DataTable } from "./components/data-table";
+import { PostsTable } from "./components/data-table";
+import { useRouter } from "next/navigation";
+
+
 
 export default function UsersPage() {
   const dispatch = useDispatch<AppDispatch>();
 
   const {
-    users,
+    posts,
     pagination,
     loading,
-  } = useSelector((state: RootState) => state.users);
-  console.log("users", users);
+  } = useSelector((state: RootState) => state.posts);
+  console.log("posts", posts);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const [accountStatus, setAccountStatus] = useState<"all" | "active" | "deactivated">("all");
+  // const [accountStatus, setAccountStatus] = useState<"all" | "active" | "deactivated">("all");
 
   // debounce
   useEffect(() => {
@@ -46,7 +45,7 @@ export default function UsersPage() {
   // users API
   useEffect(() => {
     dispatch(
-      fetchUsers({
+      fetchPosts({
         page: currentPage,
         limit: pageSize,
         search: debouncedSearch,
@@ -57,14 +56,10 @@ export default function UsersPage() {
 
   // user detail APIs
   useEffect(() => {
-    if (selectedUserId) {
-      dispatch(fetchUserById(selectedUserId));
-      dispatch(fetchUserPosts(selectedUserId));
-      dispatch(fetchUserEmergencyContacts(selectedUserId));
-      dispatch(fetchUserReported(selectedUserId));
-      dispatch(fetchUserReports(selectedUserId));
+    if (selectedPostId) {
+      dispatch(fetchPostById(selectedPostId));
     }
-  }, [dispatch, selectedUserId]);
+  }, [dispatch, selectedPostId]);
 
   // reset page on search
   useEffect(() => {
@@ -81,25 +76,30 @@ export default function UsersPage() {
       setCurrentPage(1);
     },
   };
+  const router = useRouter();
+  const handleViewPost = (postId: string) => {
+    setSelectedPostId(postId);
+    router.push(`/dashboard/post/${postId}`);
+  };
 
   return (
     <div className="flex flex-col gap-4">
 
-      <h1 className="text-2xl font-bold">Users</h1>
+      <h1 className="text-2xl font-bold">Posts</h1>
 
       <div className="@container/main px-4 lg:px-6 mt-8 lg:mt-12">
-        <DataTable
-          users={users}
+        <PostsTable
+          posts={posts}
           pagination={paginationData}
           loading={loading}
 
           search={search}
           setSearch={setSearch}
 
-          accountStatus={accountStatus}
-          setAccountStatus={setAccountStatus}
+          // accountStatus={accountStatus}
+          // setAccountStatus={setAccountStatus}
 
-          onViewUser={(id: string) => setSelectedUserId(id)}
+          onViewPost={handleViewPost}
         />
       </div>
     </div>

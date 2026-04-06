@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useDispatch } from "react-redux";
+import { updatePassword } from "@/lib/slices/authSlice";
+import { AppDispatch } from "@/lib/store";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -15,8 +18,9 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -39,7 +43,7 @@ const ResetPassword = () => {
     // Reset password logic here
     console.log("Password reset with:", password);
     
-    // Redirect to login page
+    await dispatch(updatePassword({ password }));
     router.push("/auth/login");
   };
 
@@ -126,3 +130,4 @@ const ResetPassword = () => {
 };
 
 export default ResetPassword;
+

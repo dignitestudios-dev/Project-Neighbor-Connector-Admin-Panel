@@ -1,12 +1,19 @@
+"use client";
 import { API } from './axios';
+import Cookies from 'js-cookie';
 
 // Login API call
 export const login = async (credentials: any) => {
-  const response = await API.post('/auth/login', credentials);
-  // Store token in localStorage (handled by interceptor, but can be done here too)
-  if (response.data.token) {
-    localStorage.setItem('authToken', response.data.token);
+  const response = await API.post('/auth/admin/signup', credentials);
+
+  // Extract token from API response
+  const token = response.data.data?.token;
+  if (token) {
+    // Save in cookie (7 days)
+    Cookies.set('authToken', token, { expires: 7, sameSite: 'strict' });
   }
+
+  console.log(response.data, 'login response');
   return response.data;
 };
 
@@ -28,6 +35,38 @@ export const logout = async () => {
   } finally {
     // Always remove token locally
     localStorage.removeItem('authToken');
+  }
+};
+
+// import { API } from './axios'; // your axios instance
+
+export const forgotPassword = async (email: string) => {
+  try {
+    const response = await API.post('/auth/forgot', { email });
+    // The API should return a message like "Password reset link sent"
+    return response.data;
+  } catch (error: any) {
+    // Handle errors
+    throw new Error(error.response?.data?.message || 'Failed to send reset link');
+  }
+};
+
+export const verifyOTP = async (otp: number, email: string) => {
+  try {
+    const response = await API.post('/admin/auth/verifyOTP', { otp, email });
+    Cookies.set('authToken', response.data.data.token, { expires: 7,});
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to verify OTP');
+  }
+};
+
+export const updatePassword = async (password: string) => {
+  try {
+    const response = await API.post('/admin/updatePassword', { password });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to update password');
   }
 };
 

@@ -1,6 +1,8 @@
 import axios from "axios";
+import Cookies from "js-cookie";
 
-export const baseURL = "your-api-baseurl.com/api"; // Replace with your actual base URL
+
+export const baseURL = "https://api.staging.neighborconnector.org"; // Replace with your actual base URL
 
 const headers = {
   "Content-Type": "application/json",
@@ -19,7 +21,7 @@ export const API = axios.create({
 // Request Interceptor
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("authToken"); // Retrieve token from storage
+    const token = Cookies.get("authToken"); // Retrieve token from storage
     if (token) {
       config.headers.authorization = `Bearer ${token}`;
     }
@@ -33,7 +35,7 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error?.response?.status === 401) {
-      localStorage.removeItem("authToken"); // Remove token if unauthorized
+      Cookies.remove("authToken"); // Remove token if unauthorized
       window.location.href = "/auth/login"; // Redirect to login page
     }
     console.log(error);
