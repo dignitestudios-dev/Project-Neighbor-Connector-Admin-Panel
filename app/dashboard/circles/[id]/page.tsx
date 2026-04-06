@@ -36,6 +36,7 @@ export default function IdPage() {
     loading,
     posts,
     members,
+    adminloading,
     membersLoading,
     postsLoading,
   } = useSelector((state: RootState) => state.circles);
@@ -226,7 +227,7 @@ export default function IdPage() {
                                 type="checkbox"
                                 className="sr-only"
                                 checked={user?.isAdmin}
-                                disabled={membersLoading}
+                                disabled={adminloading}
                                 onChange={async () => {
                                   try {
                                     const circleId = Array.isArray(id) ? id[0] : id;
@@ -336,11 +337,16 @@ export default function IdPage() {
             <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
               <div>
                 <p>Date</p>
-                <p className="font-medium">{post.date || "—"}</p>
+                <p className="font-medium">  {post.updatedAt ? new Date(post.updatedAt).toLocaleString() : "—"}</p>
+              </div>
+
+              <div>
+                <p>Cycles</p>
+                <p className="font-medium">{post.cycles ?? 0}</p>
               </div>
               <div>
-                <p>Time</p>
-                <p className="font-medium">{post.time || "—"}</p>
+                <p>Occurrence</p>
+                <p className="font-medium">{post.occurrence || "—"}</p>
               </div>
               <div>
                 <p>Frequency</p>
@@ -348,19 +354,23 @@ export default function IdPage() {
                   {post.frequency || "—"}
                 </p>
               </div>
-              <div>
-                <p>Cycles</p>
-                <p className="font-medium">{post.cycles ?? 0}</p>
-              </div>
-              <div className="col-span-2">
-                <p>Address</p>
-                <p className="font-medium">{post.address || "—"}</p>
-              </div>
+              
+              
               <div>
                 <p>Pinned</p>
                 <p className="font-medium">
                   {post.isPinned ? "Yes" : "No"}
                 </p>
+              </div>
+               <div>
+                <p>Type</p>
+                <p className="font-medium">
+                  {post.type || "—"}
+                </p>
+              </div>
+              <div className="col-span-2">
+                <p>Address</p>
+                <p className="font-medium">{post.address || "—"}</p>
               </div>
             </div>
           </div>

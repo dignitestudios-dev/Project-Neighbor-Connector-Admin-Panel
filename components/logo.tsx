@@ -1,19 +1,19 @@
 import Image from "next/image"
-import * as React from "react"
 
-interface LogoProps extends React.SVGProps<SVGSVGElement> {
+interface LogoProps {
   size?: number
+  className?: string
+  color?: string
 }
 
-export function Logo({ size = 50, className, ...props }: LogoProps) {
+export function Logo({ size = 50, className }: LogoProps) {
   return (
     <Image
       src="/images/Logo.png"
       alt="Neighbor Connector Logo"
-      width={500}
-      height={500}
+      width={size}
+      height={size}
       className={className}
-      {...props}
     />
   )
 }
