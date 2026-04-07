@@ -57,13 +57,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <Card className="p-4">
-        <h2 className="text-sm text-gray-500">Total Users</h2>
-        <p className="text-xl font-bold">{stats?.totalUser || 0}</p>
-      </Card>
-
-     
+    <div>
+      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="p-4">
+          <h2 className="text-sm text-gray-500">Total Users</h2>
+          <p className="text-xl font-bold">{stats?.totalUser || 0}</p>
+        </Card>
 
         <Card className="p-4">
           <h2 className="text-sm text-gray-500">Total Circle</h2>
@@ -80,32 +79,32 @@ export default function DashboardPage() {
           <p className="text-xl font-bold">{stats?.totalCheckOut || 0}</p>
         </Card>
       </div>
-<div className="flex gap-3 p-4 items-center justify-end">
-      <input
-    type="date"
-    value={startDate}
-    max={new Date().toISOString().split("T")[0]} // ✅ max today
-    onChange={(e) => setStartDate(e.target.value)}
-    className="border px-2 py-1 rounded"
-  />
 
-  <input
-    type="date"
-    value={endDate}
-    max={new Date().toISOString().split("T")[0]} // ✅ max today
-    onChange={(e) => setEndDate(e.target.value)}
-    className="border px-2 py-1 rounded"
-  />
+      <div className="flex gap-3 p-4 items-center justify-end">
+        <input
+          type="date"
+          value={startDate}
+          max={new Date().toISOString().split("T")[0]}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="border px-2 py-1 rounded"
+        />
 
-  <button
-    onClick={handleFilter}
-    className="bg-primary hover:bg-primary/80 text-white px-3 py-1 rounded"
-  >
-    Apply
-  </button>
-</div>
-     
-      {/* ✅ CHART */}
+        <input
+          type="date"
+          value={endDate}
+          max={new Date().toISOString().split("T")[0]}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="border px-2 py-1 rounded"
+        />
+
+        <button
+          onClick={handleFilter}
+          className="bg-primary hover:bg-primary/80 text-white px-3 py-1 rounded"
+        >
+          Apply
+        </button>
+      </div>
+
       <div className="p-4">
         <HeavyChartsPage charts={charts} loading={loading} />
       </div>
