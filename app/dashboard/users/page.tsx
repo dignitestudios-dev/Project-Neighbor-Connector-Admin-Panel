@@ -75,6 +75,7 @@ export default function UsersPage() {
     currentPage: pagination?.currentPage ?? currentPage,
     itemsPerPage: pagination?.itemsPerPage ?? pageSize,
     totalPages: pagination?.totalPages ?? 1,
+    totalItems: pagination?.totalItems ?? 0,
     setCurrentPage,
     setPageSize: (size: number) => {
       setPageSize(size);

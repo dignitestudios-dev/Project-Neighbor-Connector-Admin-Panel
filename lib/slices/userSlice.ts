@@ -13,24 +13,28 @@ import {
 
 export interface ApiUser {
   _id: string;
-  name: string;
+  name: string | null;
   email: string;
-  phoneNumber: string;
-  address: string;
+  phoneNumber: string | null;
+  address: string | null;
+  homeAddress?: string | null;
+  lastCheckInStatus?: string | null;
+  joinedGroup?: boolean | null;
+  accountStatus?: string | null;
   bio: string | null;
-  profilePicture: string;
+  profilePicture: string | null;
   uid: string | null;
-  location: {
+  location?: {
     type: "Point";
     coordinates: [number, number]; // [longitude, latitude]
-  };
-  isPasswordSet: boolean;
-  isSurveyCompleted: boolean;
-  isSurveyV2Completed: boolean;
-  isDeactivatedByAdmin: boolean;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
-  __v: number;
+  } | null;
+  isPasswordSet?: boolean;
+  isSurveyCompleted?: boolean;
+  isSurveyV2Completed?: boolean;
+  isDeactivatedByAdmin?: boolean;
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
+  __v?: number;
 }
 
 interface Pagination {
