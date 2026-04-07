@@ -41,6 +41,7 @@ interface CircleState {
   error: string | null;
   membersLoading: boolean;
   postsLoading: boolean;
+  adminloading: boolean;
 }
 
 const initialState: CircleState = {
@@ -54,6 +55,7 @@ const initialState: CircleState = {
   error: null,
   membersLoading: false,
   postsLoading: false,
+  adminloading: false,
 };
 
 // ---------------- THUNKS ----------------
@@ -272,10 +274,10 @@ const circleSlice = createSlice({
     // ✅ Toggle Admin
     builder
       .addCase(toggleCircleAdminThunk.pending, (state) => {
-        state.loading = true;
+        state.adminloading = true;
       })
       .addCase(toggleCircleAdminThunk.fulfilled, (state, action) => {
-        state.loading = false;
+        state.adminloading = false;
         
         // Update members list
         state.members = state.members.map((member) =>

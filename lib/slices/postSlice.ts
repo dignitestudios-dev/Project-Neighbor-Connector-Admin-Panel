@@ -23,12 +23,13 @@ interface PostMedia {
 export interface Post {
   comments: any[];
   _id: string;
-   circleId: string;
+  circleId: string;
   user: PostUser;
   circle: PostCircle[];
   type: string;
   title: string;
   description: string;
+  dateTime: any;
   date: string;
   time: string;
   frequency: string;
@@ -98,7 +99,7 @@ export const fetchPostById = createAsyncThunk<Post, string>(
   async (id: string, thunkAPI) => {
     try {
       const response = await getPostById(id);
-      return response; // API returns single Post object
+      return response.data; // API returns single Post object
     } catch (error: any) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to fetch post"
