@@ -6,19 +6,28 @@ import { Card } from "@/components/ui/card";
 import { fetchDashboardStats, fetchDashboardCharts } from "@/lib/slices/dashboardSlice";
 import { AppDispatch, RootState } from "@/lib/store";
 import HeavyChartsPage from "../heavy-charts/page";
+import { CalendarDays, CheckCircle2, CircleDot, Users } from "lucide-react";
+
+const DashboardStatsSkeleton = () => (
+  <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {Array.from({ length: 4 }).map((_, index) => (
+      <Card key={index} className="rounded-xl border p-4">
+        <div className="space-y-3">
+          <div className="h-3 w-24 animate-pulse rounded bg-gray-100" />
+          <div className="h-8 w-20 animate-pulse rounded bg-gray-100" />
+        </div>
+      </Card>
+    ))}
+  </div>
+);
 
 export default function DashboardPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const { stats, charts, loading } = useSelector((state: RootState) => state.dashboard);
 
-  const { stats, charts, loading, error } = useSelector(
-    (state: RootState) => state.dashboard
-  );
-// console.log("charts", charts);
-  // ✅ Filter state
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // ✅ Default load (last 7 days)
   useEffect(() => {
     dispatch(fetchDashboardStats());
 
@@ -26,8 +35,7 @@ export default function DashboardPage() {
     const past = new Date();
     past.setDate(today.getDate() - 7);
 
-    const format = (d: Date) => d.toISOString().split("T")[0];
-
+    const format = (date: Date) => date.toISOString().split("T")[0];
     const start = format(past);
     const end = format(today);
 
@@ -43,7 +51,6 @@ export default function DashboardPage() {
     );
   }, [dispatch]);
 
-  // ✅ Filter handler
   const handleFilter = () => {
     if (!startDate || !endDate) return;
 
@@ -56,56 +63,67 @@ export default function DashboardPage() {
     );
   };
 
+  const statsCards = [
+    { label: "Total Users", value: stats?.totalUser || 0, icon: Users, color: "text-primary" },
+    { label: "Total Circles", value: stats?.totalCircle || 0, icon: CircleDot, color: "text-[var(--primary-blue)]" },
+    { label: "Total Check In", value: stats?.totalCheckIn || 0, icon: CheckCircle2, color: "text-primary" },
+    { label: "Total Check Out", value: stats?.totalCheckOut || 0, icon: CalendarDays, color: "text-[var(--primary-blue)]" },
+  ];
+
+  const statsLoading = !stats && loading;
+
   return (
     <div>
-      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <h2 className="text-sm text-gray-500">Total Users</h2>
-          <p className="text-xl font-bold">{stats?.totalUser || 0}</p>
-        </Card>
+      {statsLoading ? (
+        <DashboardStatsSkeleton />
+      ) : (
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {statsCards.map((card) => (
+            <Card key={card.label} className="rounded-xl border p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{card.label}</p>
+                  <p className="mt-2 text-2xl font-semibold">{card.value}</p>
+                </div>
+                <card.icon className={`h-5 w-5 ${card.color}`} />
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
-        <Card className="p-4">
-          <h2 className="text-sm text-gray-500">Total Circle</h2>
-          <p className="text-xl font-bold">{stats?.totalCircle || 0}</p>
-        </Card>
+      <div className="mb-4 flex flex-wrap items-end justify-end gap-3 rounded-xl border p-4">
+        <div className="space-y-1">
+          <label className="text-xs uppercase tracking-wide text-muted-foreground">Start Date</label>
+          <input
+            type="date"
+            value={startDate}
+            max={new Date().toISOString().split("T")[0]}
+            onChange={(event) => setStartDate(event.target.value)}
+            className="rounded-md border px-3 py-2 text-sm"
+          />
+        </div>
 
-        <Card className="p-4">
-          <h2 className="text-sm text-gray-500">Total Check In</h2>
-          <p className="text-xl font-bold">{stats?.totalCheckIn || 0}</p>
-        </Card>
-
-        <Card className="p-4">
-          <h2 className="text-sm text-gray-500">Total Check Out</h2>
-          <p className="text-xl font-bold">{stats?.totalCheckOut || 0}</p>
-        </Card>
-      </div>
-
-      <div className="flex gap-3 p-4 items-center justify-end">
-        <input
-          type="date"
-          value={startDate}
-          max={new Date().toISOString().split("T")[0]}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="border px-2 py-1 rounded"
-        />
-
-        <input
-          type="date"
-          value={endDate}
-          max={new Date().toISOString().split("T")[0]}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="border px-2 py-1 rounded"
-        />
+        <div className="space-y-1">
+          <label className="text-xs uppercase tracking-wide text-muted-foreground">End Date</label>
+          <input
+            type="date"
+            value={endDate}
+            max={new Date().toISOString().split("T")[0]}
+            onChange={(event) => setEndDate(event.target.value)}
+            className="rounded-md border px-3 py-2 text-sm"
+          />
+        </div>
 
         <button
           onClick={handleFilter}
-          className="bg-primary hover:bg-primary/80 text-white px-3 py-1 rounded"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
         >
           Apply
         </button>
       </div>
 
-      <div className="p-4">
+      <div className="rounded-xl border p-4">
         <HeavyChartsPage charts={charts} loading={loading} />
       </div>
     </div>

@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { ChevronLeft, ChevronRight, Edit, Loader2, Power, RefreshCw } from "lucide-react";
 import { AppDispatch, RootState } from "@/lib/store";
 import {
+  clearCircleDetail,
   fetchCircleById,
   fetchCircleMembers,
   fetchCirclePosts,
@@ -182,6 +183,7 @@ export default function CircleDetailPage() {
 
   useEffect(() => {
     if (!id) return;
+    dispatch(clearCircleDetail());
     dispatch(fetchCircleById(id));
   }, [dispatch, id]);
 
@@ -239,8 +241,9 @@ export default function CircleDetailPage() {
 
   const membersData = useMemo(() => (members ?? []) as Member[], [members]);
   const postsData = useMemo(() => (posts ?? []) as Post[], [posts]);
+  const isSameCircle = circleDetail?._id === id;
 
-  if (detailLoading && !circleDetail) {
+  if (detailLoading || !circleDetail || !isSameCircle) {
     return (
       <div className="min-h-screen p-6">
         <div className="mx-auto max-w-7xl space-y-6">
