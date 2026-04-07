@@ -144,7 +144,7 @@ export function DataTable({
               onChange={(e) => { setStatus(e.target.value); pagination.setCurrentPage(1); }}
               className="w-full border rounded px-2 py-1"
             >
-              <option value="all">All</option>
+            
               <option value="pending">Pending</option>
               <option value="resolve">Resolved</option>
             </select>
