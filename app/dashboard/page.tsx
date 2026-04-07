@@ -25,31 +25,28 @@ export default function DashboardPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { stats, charts, loading } = useSelector((state: RootState) => state.dashboard);
 
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const defaultDates = (() => {
+    const today = new Date();
+    const past = new Date();
+    past.setDate(today.getDate() - 7);
+    const format = (date: Date) => date.toISOString().split("T")[0];
+    return { start: format(past), end: format(today) };
+  })();
+
+  const [startDate, setStartDate] = useState(defaultDates.start);
+  const [endDate, setEndDate] = useState(defaultDates.end);
 
   useEffect(() => {
     dispatch(fetchDashboardStats());
 
-    const today = new Date();
-    const past = new Date();
-    past.setDate(today.getDate() - 7);
-
-    const format = (date: Date) => date.toISOString().split("T")[0];
-    const start = format(past);
-    const end = format(today);
-
-    setStartDate(start);
-    setEndDate(end);
-
     dispatch(
       fetchDashboardCharts({
-        startdate: start,
-        enddate: end,
+        startdate: defaultDates.start,
+        enddate: defaultDates.end,
         type: "custom",
       })
     );
-  }, [dispatch]);
+  }, [dispatch, defaultDates.end, defaultDates.start]);
 
   const handleFilter = () => {
     if (!startDate || !endDate) return;
