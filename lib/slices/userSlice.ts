@@ -44,6 +44,13 @@ interface Pagination {
   totalItems: number;
 }
 
+interface AsyncSectionLoading {
+  emergencyContacts: boolean;
+  posts: boolean;
+  reported: boolean;
+  reports: boolean;
+}
+
 interface UserState {
   users: ApiUser[];
   userDetail: ApiUser | null;
@@ -53,6 +60,10 @@ interface UserState {
   posts: any[];
   reportedPosts: any[];
   reportsAgainstUser: any[];
+  postsPagination: Pagination | null;
+  reportedPagination: Pagination | null;
+  reportsPagination: Pagination | null;
+  sectionLoading: AsyncSectionLoading;
 
   pagination: Pagination | null;
 
@@ -71,6 +82,15 @@ const initialState: UserState = {
   posts: [],
   reportedPosts: [],
   reportsAgainstUser: [],
+  postsPagination: null,
+  reportedPagination: null,
+  reportsPagination: null,
+  sectionLoading: {
+    emergencyContacts: false,
+    posts: false,
+    reported: false,
+    reports: false,
+  },
 
   pagination: null,
 
@@ -122,9 +142,19 @@ export const fetchUserEmergencyContacts = createAsyncThunk(
 
 export const fetchUserPosts = createAsyncThunk(
   "users/fetchUserPosts",
-  async (id: string, thunkAPI) => {
+  async (
+    params: { id: string; page?: number; limit?: number } | string,
+    thunkAPI
+  ) => {
     try {
-      return await getUserPosts(id);
+      const normalized =
+        typeof params === "string"
+          ? { id: params, page: 1, limit: 10 }
+          : { id: params.id, page: params.page ?? 1, limit: params.limit ?? 10 };
+      return await getUserPosts(normalized.id, {
+        page: normalized.page,
+        limit: normalized.limit,
+      });
     } catch (error: any) {
       return thunkAPI.rejectWithValue(error.message);
     }
@@ -133,9 +163,19 @@ export const fetchUserPosts = createAsyncThunk(
 
 export const fetchUserReported = createAsyncThunk(
   "users/fetchUserReported",
-  async (id: string, thunkAPI) => {
+  async (
+    params: { id: string; page?: number; limit?: number } | string,
+    thunkAPI
+  ) => {
     try {
-      return await getUserReported(id);
+      const normalized =
+        typeof params === "string"
+          ? { id: params, page: 1, limit: 10 }
+          : { id: params.id, page: params.page ?? 1, limit: params.limit ?? 10 };
+      return await getUserReported(normalized.id, {
+        page: normalized.page,
+        limit: normalized.limit,
+      });
     } catch (error: any) {
       return thunkAPI.rejectWithValue(error.message);
     }
@@ -144,9 +184,19 @@ export const fetchUserReported = createAsyncThunk(
 
 export const fetchUserReports = createAsyncThunk(
   "users/fetchUserReports",
-  async (id: string, thunkAPI) => {
+  async (
+    params: { id: string; page?: number; limit?: number } | string,
+    thunkAPI
+  ) => {
     try {
-      return await getUserReports(id);
+      const normalized =
+        typeof params === "string"
+          ? { id: params, page: 1, limit: 10 }
+          : { id: params.id, page: params.page ?? 1, limit: params.limit ?? 10 };
+      return await getUserReports(normalized.id, {
+        page: normalized.page,
+        limit: normalized.limit,
+      });
     } catch (error: any) {
       return thunkAPI.rejectWithValue(error.message);
     }
@@ -178,6 +228,15 @@ const userSlice = createSlice({
       state.reportedPosts = [];
       state.reportsAgainstUser = [];
       state.emergencyContacts = [];
+      state.postsPagination = null;
+      state.reportedPagination = null;
+      state.reportsPagination = null;
+      state.sectionLoading = {
+        emergencyContacts: false,
+        posts: false,
+        reported: false,
+        reports: false,
+      };
     },
   },
   extraReducers: (builder) => {
@@ -215,21 +274,56 @@ const userSlice = createSlice({
       });
 
     // ===== EXTRA DATA =====
-    builder.addCase(fetchUserEmergencyContacts.fulfilled, (state, action) => {
-      state.emergencyContacts = action.payload?.data || [];
-    });
+    builder
+      .addCase(fetchUserEmergencyContacts.pending, (state) => {
+        state.sectionLoading.emergencyContacts = true;
+      })
+      .addCase(fetchUserEmergencyContacts.fulfilled, (state, action) => {
+        state.sectionLoading.emergencyContacts = false;
+        state.emergencyContacts = action.payload?.data || [];
+      })
+      .addCase(fetchUserEmergencyContacts.rejected, (state) => {
+        state.sectionLoading.emergencyContacts = false;
+      });
 
-    builder.addCase(fetchUserPosts.fulfilled, (state, action) => {
-      state.posts = action.payload?.data || [];
-    });
+    builder
+      .addCase(fetchUserPosts.pending, (state) => {
+        state.sectionLoading.posts = true;
+      })
+      .addCase(fetchUserPosts.fulfilled, (state, action) => {
+        state.sectionLoading.posts = false;
+        state.posts = action.payload?.data || [];
+        state.postsPagination = action.payload?.pagination || null;
+      })
+      .addCase(fetchUserPosts.rejected, (state) => {
+        state.sectionLoading.posts = false;
+      });
 
-    builder.addCase(fetchUserReported.fulfilled, (state, action) => {
-      state.reportedPosts = action.payload?.data?.data || [];
-    });
+    builder
+      .addCase(fetchUserReported.pending, (state) => {
+        state.sectionLoading.reported = true;
+      })
+      .addCase(fetchUserReported.fulfilled, (state, action) => {
+        state.sectionLoading.reported = false;
+        state.reportedPosts = action.payload?.data?.data || [];
+        state.reportedPagination = action.payload?.data?.pagination || null;
+      })
+      .addCase(fetchUserReported.rejected, (state) => {
+        state.sectionLoading.reported = false;
+      });
 
-    builder.addCase(fetchUserReports.fulfilled, (state, action) => {
-      state.reportsAgainstUser = action.payload.data.data || [];
-    });
+    builder
+      .addCase(fetchUserReports.pending, (state) => {
+        state.sectionLoading.reports = true;
+      })
+      .addCase(fetchUserReports.fulfilled, (state, action) => {
+        state.sectionLoading.reports = false;
+        state.reportsAgainstUser = action.payload?.data?.data || [];
+        state.reportsPagination = action.payload?.data?.pagination || null;
+      })
+      .addCase(fetchUserReports.rejected, (state) => {
+        state.sectionLoading.reports = false;
+      });
     builder.addCase(toggleUserBlockStatus.fulfilled, (state, action) => {
       const updatedUser = action.payload;
 

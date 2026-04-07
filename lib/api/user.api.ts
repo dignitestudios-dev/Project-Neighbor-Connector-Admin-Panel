@@ -1,4 +1,5 @@
 import { API } from "./axios";
+import { AxiosError } from "axios";
 
 // ---------------- TYPES ----------------
 
@@ -7,6 +8,16 @@ interface GetUsersParams {
   limit?: number;
   search?: string;
 }
+
+interface ListParams {
+  page?: number;
+  limit?: number;
+}
+
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  const apiError = error as AxiosError<{ message?: string }>;
+  return apiError.response?.data?.message || fallback;
+};
 
 // ---------------- USERS ----------------
 
@@ -20,8 +31,8 @@ export const getUsers = async (params: GetUsersParams = {}) => {
     });
 
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Failed to fetch users");
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Failed to fetch users"));
   }
 };
 
@@ -30,8 +41,8 @@ export const getUserById = async (id: string) => {
   try {
     const response = await API.get(`/admin/user/${id}`);
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Failed to fetch user");
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Failed to fetch user"));
   }
 };
 
@@ -42,38 +53,47 @@ export const getUserEmergencyContacts = async (id: string) => {
   try {
     const response = await API.get(`/admin/user/${id}/emergency-contact`);
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Failed to fetch emergency contacts");
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Failed to fetch emergency contacts"));
   }
 };
 
 // ✅ User Posts
-export const getUserPosts = async (id: string) => {
+export const getUserPosts = async (id: string, params: ListParams = {}) => {
   try {
-    const response = await API.get(`/admin/user/${id}/post`);
+    const { page = 1, limit = 10 } = params;
+    const response = await API.get(`/admin/user/${id}/post`, {
+      params: { page, limit },
+    });
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Failed to fetch posts");
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Failed to fetch posts"));
   }
 };
 
 // ✅ Reported Posts (user ne jo report kiye)
-export const getUserReported = async (id: string) => {
+export const getUserReported = async (id: string, params: ListParams = {}) => {
   try {
-    const response = await API.get(`/admin/user/${id}/reported`);
+    const { page = 1, limit = 10 } = params;
+    const response = await API.get(`/admin/user/${id}/reported`, {
+      params: { page, limit },
+    });
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Failed to fetch reported items");
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Failed to fetch reported items"));
   }
 };
 
 // ✅ Reports Against User (user ke against reports)
-export const getUserReports = async (id: string) => {
+export const getUserReports = async (id: string, params: ListParams = {}) => {
   try {
-    const response = await API.get(`/admin/user/${id}/reports`);
+    const { page = 1, limit = 10 } = params;
+    const response = await API.get(`/admin/user/${id}/reports`, {
+      params: { page, limit },
+    });
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Failed to fetch reports");
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Failed to fetch reports"));
   }
 };
 
@@ -84,9 +104,7 @@ export const toggleUserBlock = async (id: string, toggle: boolean) => {
     });
 
     return response.data;
-  } catch (error: any) {
-    throw new Error(
-      error.response?.data?.message || "Failed to toggle user block"
-    );
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Failed to toggle user block"));
   }
 };

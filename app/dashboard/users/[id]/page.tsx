@@ -1,360 +1,557 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/lib/store";
 import {
-
   fetchUserById,
   fetchUserEmergencyContacts,
   fetchUserPosts,
   fetchUserReported,
   fetchUserReports,
   toggleUserBlockStatus,
-
 } from "@/lib/slices/userSlice";
-import { AppDispatch, RootState } from "@/lib/store";
-
-// ─── Tab Type ─────────────────────────────────────────────────────────────────
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Phone, ShieldAlert } from "lucide-react";
 
 type Tab = "emergency" | "posts" | "reported" | "reports";
 
-const TABS: { key: Tab; label: string }[] = [
+type PaginationInfo = {
+  currentPage: number;
+  itemsPerPage: number;
+  totalItems: number;
+  totalPages: number;
+} | null;
+
+type EmergencyContact = {
+  _id: string;
+  name?: string | null;
+  number?: string | null;
+  relation?: string | null;
+  createdAt?: string;
+};
+
+type PostMedia = {
+  url?: string;
+  type?: string;
+};
+
+type UserPost = {
+  _id: string;
+  title?: string;
+  description?: string;
+  type?: string;
+  dateTime?: number;
+  address?: string;
+  frequency?: string;
+  occurrence?: number;
+  cycle?: number;
+  media?: PostMedia[];
+  isPinned?: boolean;
+  createdAt?: string;
+};
+
+type ReportedEntity = Record<string, unknown>;
+
+type ReportItem = {
+  _id: string;
+  type?: string;
+  targetModel?: string;
+  reason?: string;
+  status?: string;
+  action?: string;
+  createdAt?: string;
+  reported?: ReportedEntity;
+  reportedBy?: unknown;
+};
+
+const PAGE_SIZE = 10;
+
+const tabs: { key: Tab; label: string }[] = [
   { key: "emergency", label: "Emergency Contacts" },
   { key: "posts", label: "Posts" },
-  { key: "reported", label: "Reported" },
-  { key: "reports", label: "Reports" },
+  { key: "reported", label: "Reported By User" },
+  { key: "reports", label: "Reports Against User" },
 ];
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+const formatDate = (value?: string) => {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+  return date.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
-export default function IdPage() {
+const formatPostDate = (unix?: number) => {
+  if (!unix) return "N/A";
+  const date = new Date(unix * 1000);
+  if (Number.isNaN(date.getTime())) return "N/A";
+  return date.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const getModelLabel = (item: ReportItem) => {
+  const model = (item.targetModel || item.type || "").toString().toLowerCase();
+  if (model.includes("comment")) return "Comment";
+  if (model.includes("post")) return "Post";
+  if (model.includes("user")) return "User";
+  if (model.includes("circle")) return "Circle";
+  return "Entity";
+};
+
+function PaginationBar({
+  pagination,
+  onPrev,
+  onNext,
+}: {
+  pagination: PaginationInfo;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  if (!pagination) return null;
+
+  return (
+    <div className="mt-4 flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-muted-foreground">
+        Showing{" "}
+        <span className="font-semibold">
+          {(pagination.currentPage - 1) * pagination.itemsPerPage + 1}-
+          {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)}
+        </span>{" "}
+        of <span className="font-semibold">{pagination.totalItems}</span>
+      </p>
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium">
+          Page {pagination.currentPage} of {pagination.totalPages}
+        </span>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 w-8 p-0"
+          disabled={pagination.currentPage <= 1}
+          onClick={onPrev}
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="h-4 w-4" style={{ color: "var(--primary-blue)" }} />
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 w-8 p-0"
+          disabled={pagination.currentPage >= pagination.totalPages}
+          onClick={onNext}
+          aria-label="Next page"
+        >
+          <ChevronRight className="h-4 w-4" style={{ color: "var(--primary-blue)" }} />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ReportEntityCard({ item }: { item: ReportItem }) {
+  const model = getModelLabel(item);
+  const entity = item.reported ?? {};
+
+  const userView =
+    model === "User"
+      ? {
+          title: (entity.name as string) || "Unknown user",
+          fields: [
+            { label: "Email", value: (entity.email as string) || "N/A" },
+            { label: "Phone", value: (entity.phone as string) || "N/A" },
+            { label: "Address", value: (entity.address as string) || "N/A" },
+            { label: "Bio", value: (entity.bio as string) || "N/A" },
+          ],
+        }
+      : null;
+
+  const postView =
+    model === "Post"
+      ? {
+          title: (entity.title as string) || "Untitled post",
+          fields: [
+            { label: "Type", value: (entity.type as string) || "N/A" },
+            { label: "Description", value: (entity.description as string) || "N/A" },
+            { label: "Address", value: (entity.address as string) || "N/A" },
+            { label: "Frequency", value: entity.frequency ? String(entity.frequency) : "N/A" },
+            {
+              label: "Occurrence",
+              value: typeof entity.occurrence === "number" ? String(entity.occurrence) : "N/A",
+            },
+          ],
+        }
+      : null;
+
+  const commentView =
+    model === "Comment"
+      ? {
+          title: "Comment",
+          fields: [
+            { label: "Description", value: (entity.description as string) || "N/A" },
+            { label: "Likes", value: typeof entity.likes === "number" ? String(entity.likes) : "N/A" },
+            {
+              label: "Replies",
+              value: typeof entity.replies === "number" ? String(entity.replies) : "N/A",
+            },
+          ],
+        }
+      : null;
+
+  const circleView =
+    model === "Circle"
+      ? {
+          title: (entity.name as string) || "Circle",
+          fields: [{ label: "Invite Code", value: entity.inviteCode ? String(entity.inviteCode) : "N/A" }],
+        }
+      : null;
+
+  const view = userView || postView || commentView || circleView;
+
+  return (
+    <div className="rounded-xl border p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold">{view?.title ?? "Reported entity"}</p>
+        </div>
+        <Badge variant="outline" className="border-primary/40 text-primary">{model}</Badge>
+      </div>
+      <div className="space-y-2">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-primary">Report Details</p>
+          <div className="mt-2 grid gap-1 text-sm">
+            <p><span className="font-medium">Reason:</span> {item.reason || "N/A"}</p>
+            <p><span className="font-medium">Status:</span> {item.status || item.action || "pending"}</p>
+            <p><span className="font-medium">Created:</span> {formatDate(item.createdAt)}</p>
+          </div>
+        </div>
+      </div>
+      <hr className="my-3 border-border" />
+      <div>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-primary">Reported Entity</p>
+        <div className="mt-2 grid gap-1 text-sm">
+          {(view?.fields ?? [{ label: "Details", value: "N/A" }]).map((field) => (
+            <p key={`${field.label}-${field.value}`}>
+              <span className="font-medium">{field.label}:</span> {field.value}
+            </p>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function UserDetailPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const { id } = useParams<{ id: string }>();
+
   const {
     userDetail,
-    userCheckinfo,
-    loading,
-    posts,
+    detailLoading,
     emergencyContacts,
+    posts,
     reportedPosts,
     reportsAgainstUser,
-
+    postsPagination,
+    reportedPagination,
+    reportsPagination,
+    sectionLoading,
   } = useSelector((state: RootState) => state.users);
 
-  const params = useParams();
-  const { id } = params;
-
   const [activeTab, setActiveTab] = useState<Tab>("emergency");
-  const [showActionMenu, setShowActionMenu] = useState(false);
-const handleToggleBlock = async () => {
-  if (!userDetail?._id) return;
+  const [postsPage, setPostsPage] = useState(1);
+  const [reportedPage, setReportedPage] = useState(1);
+  const [reportsPage, setReportsPage] = useState(1);
+  const [blockLoading, setBlockLoading] = useState(false);
 
-  await dispatch(
-    toggleUserBlockStatus({
-      id: userDetail._id,
-      toggle: !userDetail.isDeactivatedByAdmin,
-    })
+  useEffect(() => {
+    if (!id) return;
+    dispatch(fetchUserById(id));
+    dispatch(fetchUserEmergencyContacts(id));
+  }, [id, dispatch]);
+
+  useEffect(() => {
+    if (!id) return;
+    if (activeTab === "posts") {
+      dispatch(fetchUserPosts({ id, page: postsPage, limit: PAGE_SIZE }));
+    }
+    if (activeTab === "reported") {
+      dispatch(fetchUserReported({ id, page: reportedPage, limit: PAGE_SIZE }));
+    }
+    if (activeTab === "reports") {
+      dispatch(fetchUserReports({ id, page: reportsPage, limit: PAGE_SIZE }));
+    }
+  }, [activeTab, id, postsPage, reportedPage, reportsPage, dispatch]);
+
+  const handleToggleBlock = async () => {
+    if (!userDetail?._id) return;
+    setBlockLoading(true);
+    await dispatch(
+      toggleUserBlockStatus({
+        id: userDetail._id,
+        toggle: !userDetail.isDeactivatedByAdmin,
+      })
+    );
+    await dispatch(fetchUserById(userDetail._id));
+    setBlockLoading(false);
+  };
+
+  const userName = useMemo(
+    () => userDetail?.name || userDetail?.email || "User",
+    [userDetail?.name, userDetail?.email]
   );
 
-  // 👇 dubara fresh data load karo
-  dispatch(fetchUserById(userDetail._id));
-};
-  // Fetch user detail
-  useEffect(() => {
-    if (id && typeof id === "string") {
-      dispatch(fetchUserById(id));
-      dispatch(fetchUserEmergencyContacts(id));
-      dispatch(fetchUserPosts(id));
-      dispatch(fetchUserReported(id));
-      dispatch(fetchUserReports(id));
-    
-    }
-  }, [id, dispatch]);
-  
+  const tabCounts = {
+    emergency: (emergencyContacts as EmergencyContact[])?.length ?? 0,
+    posts: (posts as UserPost[])?.length ?? 0,
+    reported: (reportedPosts as ReportItem[])?.length ?? 0,
+    reports: (reportsAgainstUser as ReportItem[])?.length ?? 0,
+  };
 
-  console.log(userDetail, "userDetail");
-  console.log(userCheckinfo, "userCheckinfo");
+  if (detailLoading && !userDetail) {
+    return (
+      <div className="min-h-screen p-6">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <div className="h-8 w-40 animate-pulse rounded bg-gray-100" />
+          <div className="h-48 animate-pulse rounded-2xl border bg-gray-100" />
+          <div className="h-72 animate-pulse rounded-2xl border bg-gray-100" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen p-6 ">
-      <div className=" mx-auto space-y-5">
-
-        {/* Back */}
+    <div className="min-h-screen p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         <button
           onClick={() => window.history.back()}
-          className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 transition-colors"
+          className="inline-flex items-center gap-1 text-sm font-medium text-primary transition"
+          style={{ color: "var(--primary-blue)" }}
         >
-          ← Back to Users
+          <ChevronLeft className="h-4 w-4" />
+          Back to Users
         </button>
 
-      {/* Profile Card */}
-<div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
-  <div className="flex items-start justify-between gap-4">
-    <div className="flex items-center gap-4">
-      {/* Avatar */}
-      <div className="relative shrink-0">
-        {userDetail?.profilePicture ? (
-          <img
-            src={userDetail.profilePicture}
-            alt={userDetail?.name ?? "User"}
-            className="w-16 h-16 rounded-full object-cover border-2 border-gray-100"
-          />
-        ) : (
-          <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xl font-semibold">
-            {userDetail?.name?.[0]?.toUpperCase() ?? userDetail?.email?.[0]?.toUpperCase() ?? "?"}
+        <section className="rounded-2xl border p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16 border-2">
+                <AvatarImage src={userDetail?.profilePicture ?? ""} alt={userName} />
+                <AvatarFallback className="text-lg font-semibold text-primary">
+                  {userName[0]?.toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-xl font-semibold">{userName}</h1>
+                <p className="text-sm text-muted-foreground">{userDetail?.email || "N/A"}</p>
+                <p className="text-sm text-muted-foreground">{userDetail?.phoneNumber || "N/A"}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="border-primary/40 text-primary">
+                {userDetail?.accountStatus || "Active"}
+              </Badge>
+              <Badge variant="outline" className="border-primary/40 text-primary">
+                Last check-in: {userDetail?.lastCheckInStatus || "N/A"}
+              </Badge>
+              <Button
+                onClick={handleToggleBlock}
+                disabled={blockLoading || detailLoading}
+                variant="outline"
+                className="border-primary/40 text-primary"
+              >
+                {blockLoading
+                  ? "Updating..."
+                  : userDetail?.isDeactivatedByAdmin
+                  ? "Unblock User"
+                  : "Block User"}
+              </Button>
+            </div>
           </div>
-        )}
-        {/* Online/Active indicator */}
-        <span className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-white bg-green-400" />
-      </div>
 
-      {/* Basic Info */}
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900">
-          {userDetail?.name ?? <span className="italic text-gray-400">No name</span>}
-        </h1>
-        <p className="text-sm text-gray-500">{userDetail?.email}</p>
-        {userDetail?.phoneNumber && (
-          <p className="text-sm text-gray-400">{userDetail.phoneNumber}</p>
-        )}
-      </div>
-    </div>
+          <div className="mt-5 grid gap-4 rounded-xl border p-4 sm:grid-cols-2 xl:grid-cols-4">
+            <InfoRow label="Address" value={userDetail?.homeAddress || userDetail?.address || "N/A"} />
+            <InfoRow label="Joined Group" value={userDetail?.joinedGroup ? "Yes" : "No"} />
+            <InfoRow label="Joined On" value={formatDate(userDetail?.createdAt)} />
+            <InfoRow label="Updated On" value={formatDate(userDetail?.updatedAt)} />
+          </div>
+          {userDetail?.bio && (
+            <p className="mt-4 rounded-lg border p-3 text-sm">
+              {userDetail.bio}
+            </p>
+          )}
+        </section>
 
-    {/* Status badges */}
-    <div className="flex items-center gap-2">
-  <button
-    onClick={handleToggleBlock}
-    disabled={loading}
-    className={`px-4 py-1.5 text-xs font-medium rounded-md transition 
-    ${
-      userDetail?.isDeactivatedByAdmin
-        ? "bg-green-100 text-green-700 hover:bg-green-200"
-        : "bg-red-100 text-red-600 hover:bg-red-200"
-    }
-    ${loading ? "opacity-50 cursor-not-allowed" : ""}
-    `}
-  >
-    {loading
-      ? "Processing..."
-      : userDetail?.isDeactivatedByAdmin
-      ? "Unblock User"
-      : "Block User"}
-  </button>
-</div>
-  </div>
-
-  {/* Divider */}
-  <hr className="border-gray-100" />
-
-  {/* Detail Grid */}
-  <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-    {userDetail?.address && (
-      <div className="col-span-2">
-        <p className="text-xs text-gray-400 mb-0.5">Address</p>
-        <p className="text-gray-700">{userDetail.address}</p>
-      </div>
-    )}
-    <div>
-      <p className="text-xs text-gray-400 mb-0.5">Joined</p>
-      <p className="text-gray-700">
-        {userDetail?.createdAt
-          ? new Date(userDetail.createdAt).toLocaleDateString("en-US", {
-              day: "numeric", month: "short", year: "numeric",
-            })
-          : "—"}
-      </p>
-    </div>
-    <div>
-      <p className="text-xs text-gray-400 mb-0.5">Last Updated</p>
-      <p className="text-gray-700">
-        {userDetail?.updatedAt
-          ? new Date(userDetail.updatedAt).toLocaleDateString("en-US", {
-              day: "numeric", month: "short", year: "numeric",
-            })
-          : "—"}
-      </p>
-    </div>
-    {userDetail?.bio && (
-      <div className="col-span-2">
-        <p className="text-xs text-gray-400 mb-0.5">Bio</p>
-        <p className="text-gray-700">{userDetail.bio}</p>
-      </div>
-    )}
-  </div>
-
-  {/* Check-In Info */}
- 
-  
-
-</div>
-
-        {/* Tabs */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          {/* Tab Bar */}
-          <div className="flex border-b border-gray-200">
-            {TABS.map((tab) => (
+        <section className="overflow-hidden rounded-2xl border">
+          <div className="grid grid-cols-2 border-b md:grid-cols-4">
+            {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 text-sm font-medium py-3 px-4 transition-colors border-b-2 ${
+                className={`px-4 py-3 text-sm font-medium transition ${
                   activeTab === tab.key
-                    ? "border-blue-600 text-blue-600 bg-blue-50/50"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-primary"
                 }`}
+                style={
+                  activeTab === tab.key
+                    ? { borderColor: "var(--primary-blue)", color: "var(--primary-blue)" }
+                    : undefined
+                }
               >
                 {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Tab Content */}
-          <div className="p-5 overflow-y-auto max-h-[300px]">
-
-            {/* 1 — Emergency Contacts */}
+          <div className="p-5">
             {activeTab === "emergency" && (
-              <TabSection loading={loading} isEmpty={!emergencyContacts?.length}>
-                <div className="space-y-3">
-                  {emergencyContacts?.map((contact: any) => (
-                    <div
-                      key={contact._id}
-                      className="flex items-center justify-between border border-gray-100 rounded-lg px-4 py-3"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{contact.name ?? "—"}</p>
-                        <p className="text-xs text-gray-400">{contact.relation ?? "—"}</p>
+              <TabState loading={sectionLoading.emergencyContacts || detailLoading} empty={!tabCounts.emergency}>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {(emergencyContacts as EmergencyContact[]).map((contact) => (
+                    <div key={contact._id} className="rounded-xl border p-4">
+                      <div className="mb-2">
+                        <h3 className="text-sm font-semibold">{contact.name || "N/A"}</h3>
                       </div>
-                      <p className="text-sm text-gray-600">{contact.number ?? "—"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium text-primary">Relation:</span> {contact.relation || "N/A"}
+                      </p>
+                      <p className="mt-2 inline-flex items-center gap-1 text-sm">
+                        <Phone className="h-3.5 w-3.5 text-primary" />
+                        {contact.number || "N/A"}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">{formatDate(contact.createdAt)}</p>
                     </div>
                   ))}
                 </div>
-              </TabSection>
+              </TabState>
             )}
 
-            {/* 2 — Posts */}
             {activeTab === "posts" && (
-              <TabSection loading={loading} isEmpty={!posts?.length}>
+              <TabState loading={sectionLoading.posts} empty={!tabCounts.posts}>
                 <div className="space-y-3">
-                  {posts?.map((post: any) => (
-                    <div
-                      key={post._id}
-                      className="border border-gray-100 rounded-lg px-4 py-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{post.title ?? "Untitled"}</p>
-                          <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{post.description ?? "—"}</p>
+                  {(posts as UserPost[]).map((post) => (
+                    <div key={post._id} className="rounded-xl border p-4">
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="text-base font-semibold">{post.title || "Untitled Post"}</h3>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="border-primary/40 text-primary">
+                            {post.type
+                              ? `${post.type.charAt(0).toUpperCase()}${post.type.slice(1)}`
+                              : "Post"}
+                          </Badge>
+                          {post.isPinned && (
+                            <Badge variant="outline" className="border-primary/40 text-primary">Pinned</Badge>
+                          )}
                         </div>
-                        <span
-                          className={`text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0 ${
-                            post.type === "event"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-green-100 text-green-700"
-                          }`}
-                        >
-                          {post.type ?? "—"}
-                        </span>
                       </div>
-                      <div className="flex items-center gap-4 mt-2">
-                        <p className="text-xs text-gray-400">📅 {post.date ?? "—"}</p>
-                        <p className="text-xs text-gray-400">🕐 {post.time ?? "—"}</p>
+                      <p className="whitespace-pre-line text-sm">
+                        {post.description || "No description"}
+                      </p>
+                      <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+                        <p>Date: {formatPostDate(post.dateTime)}</p>
+                        <p>Frequency: {post.frequency || "N/A"}</p>
+                        <p>Occurrence: {typeof post.occurrence === "number" ? post.occurrence : "N/A"}</p>
+                        <p>Media: {post.media?.length || 0}</p>
                       </div>
+                      {post.address && <p className="mt-2 text-xs text-muted-foreground">Address: {post.address}</p>}
                     </div>
                   ))}
                 </div>
-              </TabSection>
+                <PaginationBar
+                  pagination={postsPagination as PaginationInfo}
+                  onPrev={() => setPostsPage((prev) => Math.max(prev - 1, 1))}
+                  onNext={() => setPostsPage((prev) => prev + 1)}
+                />
+              </TabState>
             )}
 
-            {/* 3 — Reported */}
             {activeTab === "reported" && (
-              <TabSection loading={loading} isEmpty={!reportedPosts?.length}>
+              <TabState loading={sectionLoading.reported} empty={!tabCounts.reported}>
                 <div className="space-y-3">
-                  {reportedPosts?.map((item: any) => (
-                    <div
-                      key={item._id}
-                      className="border border-gray-100 rounded-lg px-4 py-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{item.reason ?? "No reason"}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{item.description ?? "—"}</p>
-                        </div>
-                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-600 shrink-0">
-                          Reported
-                        </span>
-                      </div>
-                      {item.createdAt && (
-                        <p className="text-xs text-gray-400 mt-2">
-                          {new Date(item.createdAt).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
+                  {(reportedPosts as ReportItem[]).map((item) => (
+                    <ReportEntityCard key={item._id} item={item} />
                   ))}
                 </div>
-              </TabSection>
+                <PaginationBar
+                  pagination={reportedPagination as PaginationInfo}
+                  onPrev={() => setReportedPage((prev) => Math.max(prev - 1, 1))}
+                  onNext={() => setReportedPage((prev) => prev + 1)}
+                />
+              </TabState>
             )}
 
-            {/* 4 — Reports */}
             {activeTab === "reports" && (
-              <TabSection loading={loading} isEmpty={!reportsAgainstUser?.length}>
+              <TabState loading={sectionLoading.reports} empty={!tabCounts.reports}>
                 <div className="space-y-3">
-                  {reportsAgainstUser?.map((item: any) => (
-                    <div
-                      key={item._id}
-                      className="border border-gray-100 rounded-lg px-4 py-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{item.reason ?? "No reason"}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{item.description ?? "—"}</p>
-                        </div>
-                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 shrink-0">
-                          Report
-                        </span>
-                      </div>
-                      {item.createdAt && (
-                        <p className="text-xs text-gray-400 mt-2">
-                          {new Date(item.createdAt).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
+                  {(reportsAgainstUser as ReportItem[]).map((item) => (
+                    <ReportEntityCard key={item._id} item={item} />
                   ))}
                 </div>
-              </TabSection>
+                <PaginationBar
+                  pagination={reportsPagination as PaginationInfo}
+                  onPrev={() => setReportsPage((prev) => Math.max(prev - 1, 1))}
+                  onNext={() => setReportsPage((prev) => prev + 1)}
+                />
+              </TabState>
             )}
-
           </div>
-        </div>
-
+        </section>
       </div>
     </div>
   );
 }
 
-// ─── Tab Section Wrapper ──────────────────────────────────────────────────────
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-wide text-primary" style={{ color: "var(--primary-blue)" }}>
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium">{value}</p>
+    </div>
+  );
+}
 
-function TabSection({
+function TabState({
   loading,
-  isEmpty,
+  empty,
   children,
 }: {
   loading: boolean;
-  isEmpty: boolean;
-  children: React.ReactNode;
+  empty: boolean;
+  children: ReactNode;
 }) {
   if (loading) {
     return (
       <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse" />
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="h-24 animate-pulse rounded-xl border bg-gray-100" />
         ))}
       </div>
     );
   }
 
-  if (isEmpty) {
+  if (empty) {
     return (
-      <div className="py-12 text-center text-gray-400">
-        <p className="text-3xl mb-2">📭</p>
-        <p className="text-sm">No data available</p>
+      <div className="rounded-xl border py-12 text-center">
+        <ShieldAlert className="mx-auto mb-3 h-8 w-8 text-primary" />
+        <p className="text-sm font-medium">No data found</p>
+        <p className="mt-1 text-xs text-muted-foreground">This tab currently has no records to show.</p>
       </div>
     );
   }

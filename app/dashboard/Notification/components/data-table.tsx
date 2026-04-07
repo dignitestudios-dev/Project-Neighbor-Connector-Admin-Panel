@@ -1,7 +1,7 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,17 +12,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import Link from "next/link";
-import { Eye } from "lucide-react";
-import { AppDispatch } from "@/lib/store";
-import React, { useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { fetchNotifications } from "@/lib/slices/notificationSlice";
-import { Loader2 } from "lucide-react"; // 🔹 Make sure Loader2 is imported
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface NotificationItem {
+  _id: string;
+  title: string;
+  description: string;
+  createdAt: string;
+}
 
 interface DataTableProps {
-  notifications: any[];
+  notifications: NotificationItem[];
   pagination: {
     currentPage: number;
     itemsPerPage: number;
@@ -33,119 +46,153 @@ interface DataTableProps {
   loading: boolean;
 }
 
+const truncate = (value: string, max = 110) => {
+  if (!value) return "-";
+  if (value.length <= max) return value;
+  return `${value.slice(0, max)}...`;
+};
+
+const formatUsDateTime = (value?: string) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const SkeletonRow = () => (
+  <TableRow>
+    {Array.from({ length: 4 }).map((_, i) => (
+      <TableCell key={i}>
+        <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
+      </TableCell>
+    ))}
+  </TableRow>
+);
+
 export function DataTable({ notifications, pagination, loading }: DataTableProps) {
-  
-const dispatch = useDispatch<AppDispatch>();
-
-
-  // Fetch notifications whenever page or pageSize changes
- 
-
-  const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    pagination.setPageSize(Number(e.target.value));
-    pagination.setCurrentPage(1); // Reset to first page
-  };
-
-  const handlePreviousPage = () => {
-    if (pagination.currentPage > 1) pagination.setCurrentPage(pagination.currentPage - 1);
-  };
-
-  const handleNextPage = () => {
-    if (pagination.currentPage < pagination.totalPages) pagination.setCurrentPage(pagination.currentPage + 1);
-  };
+  const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
 
   return (
     <div className="w-full space-y-4">
-      <div className="rounded-md border">
-        <Table>
+      <div className="rounded-xl border">
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Scheduled At</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Created At</TableHead>
-          
+              <TableHead className="h-14 w-[220px] text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary-blue)" }}>Title</TableHead>
+              <TableHead className="h-14 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary-blue)" }}>Description</TableHead>
+              <TableHead className="h-14 w-[170px] text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary-blue)" }}>Created At</TableHead>
+              <TableHead className="h-14 w-[100px] text-right text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary-blue)" }}>Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-16">
-                  <Loader2 className="animate-spin mx-auto text-gray-500" size={32} />
-                </TableCell>
-              </TableRow>
-            ) : notifications
-              .map((notification) => (
+              Array.from({ length: pagination.itemsPerPage }).map((_, i) => <SkeletonRow key={i} />)
+            ) : notifications.length ? (
+              notifications.map((notification) => (
                 <TableRow key={notification._id}>
-                  <TableCell>{notification.title || "-"}</TableCell>
-                  <TableCell>{notification.description || "-"}</TableCell>
+                  <TableCell className="font-medium">{notification.title || "-"}</TableCell>
                   <TableCell>
-                    {notification.scheduledAt
-                      ? new Date(notification.scheduledAt).toLocaleString()
-                      : "-"}
+                    <span className="block max-w-full truncate" title={notification.description}>
+                      {truncate(notification.description)}
+                    </span>
                   </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={
-                        notification.status === "delivered"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }
+                  <TableCell>{formatUsDateTime(notification.createdAt)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setSelectedNotification(notification)}
+                      style={{ color: "var(--primary-blue)" }}
+                      aria-label="View notification"
                     >
-                      {notification.status}
-                    </Badge>
+                      <Eye className="size-4" />
+                    </Button>
                   </TableCell>
-                  <TableCell>
-                    {notification.createdAt
-                      ? new Date(notification.createdAt).toLocaleString()
-                      : "-"}
-                  </TableCell>
-                
                 </TableRow>
               ))
-            }
+            ) : (
+              <TableRow>
+                <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+                  No notifications found.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex flex-col sm:flex-row items-center justify-between py-4 space-y-2 sm:space-y-0">
+      <div className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center space-x-2">
-          <span className="text-sm">Items per page:</span>
-          <select
-            value={pagination.itemsPerPage}
-            onChange={handlePageSizeChange}
-            className="border rounded px-2 py-1 text-sm"
+          <Label className="text-sm font-medium">Show</Label>
+          <Select
+            value={pagination.itemsPerPage.toString()}
+            onValueChange={(val) => {
+              pagination.setPageSize(Number(val));
+              pagination.setCurrentPage(1);
+            }}
           >
-            {[5, 10, 20, 50].map((size) => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-20 cursor-pointer">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent side="top">
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="30">30</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
+          <p className="text-sm text-muted-foreground">
+            Page <strong>{pagination.currentPage}</strong> of <strong>{pagination.totalPages}</strong>
+          </p>
+          <div className="flex items-center space-x-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={handlePreviousPage}
+            onClick={() => pagination.setCurrentPage(pagination.currentPage - 1)}
             disabled={pagination.currentPage <= 1}
+            aria-label="Previous page"
+            className="cursor-pointer"
           >
-            Previous
+            <ChevronLeft className="size-4" style={{ color: "var(--primary-blue)" }} />
           </Button>
-          <span className="text-sm font-medium">
-            Page {pagination.currentPage} of {pagination.totalPages}
-          </span>
           <Button
             variant="outline"
             size="sm"
-            onClick={handleNextPage}
+            onClick={() => pagination.setCurrentPage(pagination.currentPage + 1)}
             disabled={pagination.currentPage >= pagination.totalPages}
+            aria-label="Next page"
+            className="cursor-pointer"
           >
-            Next
+            <ChevronRight className="size-4" style={{ color: "var(--primary-blue)" }} />
           </Button>
+          </div>
         </div>
       </div>
+
+      <Dialog open={Boolean(selectedNotification)} onOpenChange={(open) => !open && setSelectedNotification(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle style={{ color: "var(--primary-blue)" }}>
+              {selectedNotification?.title || "Notification"}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Created At: {formatUsDateTime(selectedNotification?.createdAt)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border p-3 text-sm leading-6">
+            {selectedNotification?.description || "-"}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

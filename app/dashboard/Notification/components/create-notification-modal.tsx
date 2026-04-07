@@ -1,10 +1,18 @@
 "use client";
 
+import { useMemo } from "react";
+import { SubmitHandler, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import React from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface NotificationFormInputs {
   title: string;
@@ -15,80 +23,131 @@ interface NotificationFormInputs {
 interface CreateNotificationModalProps {
   showCreateModal: boolean;
   setShowCreateModal: (value: boolean) => void;
-  onSubmitNotification: (data: NotificationFormInputs) => void;
+  onSubmitNotification: (data: NotificationFormInputs) => Promise<void> | void;
+  isSubmitting: boolean;
 }
+
+const MAX_TITLE = 70;
+const MAX_DESCRIPTION = 700;
+
+const toSentenceCaseFirst = (value: string) => {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
 
 const CreateNotificationModal: React.FC<CreateNotificationModalProps> = ({
   showCreateModal,
   setShowCreateModal,
   onSubmitNotification,
+  isSubmitting,
 }) => {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
     reset,
-  } = useForm<NotificationFormInputs>();
+  } = useForm<NotificationFormInputs>({
+    defaultValues: { title: "", description: "" },
+  });
 
-  const onSubmit: SubmitHandler<NotificationFormInputs> = (data) => {
-    onSubmitNotification(data);
-    reset(); // form reset after submit
-    setShowCreateModal(false);
+  const title = watch("title") ?? "";
+  const description = watch("description") ?? "";
+
+  const titleCount = useMemo(() => title.length, [title]);
+  const descriptionCount = useMemo(() => description.length, [description]);
+
+  const onSubmit: SubmitHandler<NotificationFormInputs> = async (data) => {
+    await onSubmitNotification(data);
+    reset();
   };
 
-  if (!showCreateModal) return null; // modal hidden if false
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
-        {/* Close Button */}
-        <button
-          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-          onClick={() => setShowCreateModal(false)}
-        >
-          ✕
-        </button>
-
-        <h2 className="text-xl font-semibold mb-4">Create Notification</h2>
+    <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+      <DialogContent className="sm:max-w-[560px]">
+        <DialogHeader>
+          <DialogTitle style={{ color: "var(--primary-blue)" }}>Create Notification</DialogTitle>
+          <DialogDescription>
+            Add a title and description for the notification.
+          </DialogDescription>
+        </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-2">
-            <label htmlFor="title" className="text-sm font-medium text-gray-700">
+            <label htmlFor="title" className="text-sm font-medium">
               Title
             </label>
             <Input
               id="title"
-              {...register("title", { required: "Title is required" })}
+              {...register("title", {
+                required: "Title is required",
+                maxLength: { value: MAX_TITLE, message: `Title must be ${MAX_TITLE} characters or less` },
+                onChange: (e) => {
+                  const value = e.target.value.slice(0, MAX_TITLE);
+                  setValue("title", toSentenceCaseFirst(value), { shouldValidate: true });
+                },
+              })}
+              maxLength={MAX_TITLE}
               placeholder="Enter notification title"
             />
-            {errors.title && (
-              <p className="text-red-500 text-sm">{errors.title.message}</p>
-            )}
+            <div className="flex items-center justify-between">
+              {errors.title ? (
+                <p className="text-sm text-red-500">{errors.title.message}</p>
+              ) : (
+                <span />
+              )}
+              <p className="text-xs text-muted-foreground">
+                {titleCount}/{MAX_TITLE}
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium text-gray-700">
+            <label htmlFor="description" className="text-sm font-medium">
               Description
             </label>
             <Textarea
               id="description"
-              {...register("description", { required: "Description is required" })}
+              {...register("description", {
+                required: "Description is required",
+                maxLength: {
+                  value: MAX_DESCRIPTION,
+                  message: `Description must be ${MAX_DESCRIPTION} characters or less`,
+                },
+              })}
+              maxLength={MAX_DESCRIPTION}
               placeholder="Enter notification description"
+              className="min-h-32"
             />
-            {errors.description && (
-              <p className="text-red-500 text-sm">{errors.description.message}</p>
-            )}
+            <div className="flex items-center justify-between">
+              {errors.description ? (
+                <p className="text-sm text-red-500">{errors.description.message}</p>
+              ) : (
+                <span />
+              )}
+              <p className="text-xs text-muted-foreground">
+                {descriptionCount}/{MAX_DESCRIPTION}
+              </p>
+            </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" onClick={() => setShowCreateModal(false)}>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowCreateModal(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit">Create</Button>
-          </div>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create"}
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -9,15 +9,28 @@ import {
 
 interface ReportUser {
   _id: string;
-  fullName: string;
-  username: string;
-  emailAddress: string;
+  fullName?: string;
+  username?: string;
+  emailAddress?: string;
   reason: string;
-  description: string;
+  description?: string;
   status: string;
   type: string;
   createdAt: string;
   updatedAt: string;
+  reportedBy?: {
+    _id?: string;
+    name?: string;
+    email?: string;
+    profilePicture?: string;
+  };
+  reported?: {
+    _id?: string;
+    name?: string;
+    title?: string;
+    description?: string;
+  };
+  targetModel?: string;
 }
 
 interface Pagination {
@@ -88,7 +101,7 @@ export const fetchReportsUsers = createAsyncThunk(
     thunkAPI
   ) => {
     try {
-      const { page = 1, limit = 10, type, status } = params;
+      const { page = 1, limit = 30, type, status } = params;
 
       const response = await getReports({
         page,
@@ -98,9 +111,10 @@ export const fetchReportsUsers = createAsyncThunk(
       });
 
       return response.data; // 👈 important
-    } catch (error: any) {
+    } catch (error: unknown) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch reports"
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          "Failed to fetch reports"
       );
     }
   }
@@ -117,8 +131,10 @@ export const resolveReportThunk = createAsyncThunk(
     try {
       await resolveReport(id, action);
       return { id, action };
-    } catch (err: any) {
-      return thunkAPI.rejectWithValue(err.message);
+    } catch (err: unknown) {
+      return thunkAPI.rejectWithValue(
+        (err as { message?: string })?.message || "Failed to resolve report"
+      );
     }
   }
 );
@@ -131,9 +147,10 @@ export const fetchReportsStats = createAsyncThunk(
     try {
       const response = await getReportsStats();
       return response.data; // 👈 FIXED
-    } catch (error: any) {
+    } catch (error: unknown) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch reports stats"
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          "Failed to fetch reports stats"
       );
     }
   }
@@ -156,11 +173,8 @@ const reportsSlice = createSlice({
       })
       .addCase(fetchReportsUsers.fulfilled, (state, action) => {
         state.loading = false;
-
-        state.reports = action.payload.data || [];
-
-        // ✅ pagination safe assign
-        state.pagination = action.payload.pagination || {};
+        state.reports = action.payload?.data?.data || action.payload?.data || [];
+        state.pagination = action.payload?.data?.pagination || action.payload?.pagination || null;
       })
       .addCase(fetchReportsUsers.rejected, (state, action) => {
         state.loading = false;

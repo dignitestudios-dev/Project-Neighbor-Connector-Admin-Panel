@@ -1,274 +1,219 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  MapPin,
-  Clock,
-  CalendarDays,
-  RefreshCw,
-  Hash,
-  Users,
-  MessageCircle,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
+import { ChevronLeft, Loader2, MessageCircle, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AppDispatch, RootState } from "@/lib/store";
-import { fetchPostById, fetchDeletePostById, fetchGetCommentById } from "@/lib/slices/postSlice";
-import { useParams } from "next/navigation";
+import { fetchDeletePostById, fetchGetCommentById, fetchPostById } from "@/lib/slices/postSlice";
 
-const formatDate = (dateStr?: string): string => {
-  if (!dateStr) return "-";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-PK", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateStr;
-  }
+type PostMedia = { _id?: string; url?: string; type?: "image" | "video" };
+type PostUser = { _id?: string; name?: string; email?: string; phone?: string };
+type PostCircle = { _id?: string; name?: string };
+type PostComment = { _id?: string; text?: string; createdAt?: string; user?: { name?: string } };
+
+type PostDetailShape = {
+  _id: string;
+  title?: string;
+  description?: string;
+  type?: string;
+  frequency?: string;
+  occurrence?: number;
+  isPinned?: boolean;
+  createdAt?: string;
+  media?: PostMedia[];
+  user?: PostUser;
+  circle?: PostCircle[];
 };
 
-const formatDateOnly = (timestamp?: number) => {
-  if (!timestamp) return "-";
-  return new Date(timestamp * 1000).toLocaleDateString("en-GB", {
+const formatDateTimeUs = (value?: string) => {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+  return date.toLocaleString("en-US", {
+    month: "2-digit",
     day: "2-digit",
-    month: "short",
     year: "numeric",
-  });
-};
-
-const formatTimeOnly = (timestamp?: number) => {
-  if (!timestamp) return "-";
-  return new Date(timestamp * 1000).toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
 };
 
-const MetaItem = ({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value?: string;
-}) => (
-  <div className="flex items-start gap-3 rounded-xl bg-muted/50 px-4 py-3">
-    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-    <div>
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="text-sm font-medium text-foreground">{value || "-"}</p>
+const formatType = (type?: string) => (type ? `${type.charAt(0).toUpperCase()}${type.slice(1)}` : "N/A");
+
+const initials = (name?: string) =>
+  name
+    ? name
+        .split(" ")
+        .filter(Boolean)
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "U";
+
+function DetailSkeleton() {
+  return (
+    <div className="min-h-screen p-6">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="h-6 w-32 animate-pulse rounded bg-gray-100" />
+        <div className="h-40 animate-pulse rounded-2xl border bg-gray-100" />
+        <div className="h-56 animate-pulse rounded-2xl border bg-gray-100" />
+      </div>
     </div>
-  </div>
-);
-
-const PostDetailCard = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const params = useParams();
-  const { id } = params;
-  const { postDetail, comments } = useSelector((state: RootState) => state.posts);
-
-  console.log("postDetail", postDetail);
-  useEffect(() => {
-    if (id) {
-      const postId = Array.isArray(id) ? id[0] : id;
-      if (postId) {
-        dispatch(fetchPostById(postId));
-      }
-    }
-  }, [id, dispatch]);
-
-// Fetch comments only when postDetail and circleId exist
-useEffect(() => {
-  if (postDetail?.circle && Array.isArray(postDetail.circle) && postDetail.circle.length > 0) {
-    const circleId = postDetail.circle[0]?._id;
-    const postId = Array.isArray(id) ? id[0] : id;
-    if (circleId && postId) {
-      dispatch(fetchGetCommentById({ id: postId, circleId }));
-    }
+  );
 }
-}, [postDetail, id, dispatch])
 
+export default function PostDetailPage() {
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+  const { id } = useParams<{ id: string }>();
+  const { postDetail, comments } = useSelector((state: RootState) => state.posts);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // ✅ Delete handler
+  useEffect(() => {
+    if (!id) return;
+    dispatch(fetchPostById(id));
+  }, [dispatch, id]);
+
+  useEffect(() => {
+    if (!postDetail || !id) return;
+    const circleId = postDetail.circle?.[0]?._id;
+    if (circleId) {
+      dispatch(fetchGetCommentById({ id, circleId }));
+    }
+  }, [dispatch, id, postDetail]);
+
   const handleDelete = async () => {
     if (!id) return;
-    const postId = Array.isArray(id) ? id[0] : id;
-    if (!postId) return;
-
     try {
-      await dispatch(fetchDeletePostById(postId)).unwrap();
-    
-      window.history.back();
-    } catch (error: any) {
-      alert(error || "Delete failed");
+      setDeleteLoading(true);
+      await dispatch(fetchDeletePostById(id)).unwrap();
+      router.push("/dashboard/post");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
-  if (!postDetail) {
-    return <p className="p-5">Loading...</p>;
+  const detail = useMemo(() => postDetail as PostDetailShape | null, [postDetail]);
+  const postComments = useMemo(() => (comments ?? []) as PostComment[], [comments]);
+
+  if (!detail) {
+    return <DetailSkeleton />;
   }
 
   return (
-    <div className="p-6">
-      {/* Back + Delete buttons */}
-      <div className="flex justify-between items-center py-5">
+    <div className="min-h-screen p-6">
+      <div className="mx-auto max-w-6xl space-y-6">
         <button
-          onClick={() => window.history.back()}
-          className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 transition-colors"
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-1 text-sm font-medium transition"
+          style={{ color: "var(--primary-blue)" }}
         >
-          ← Back to Post 
+          <ChevronLeft className="h-4 w-4" />
+          Back to Posts
         </button>
 
-        <button
-          onClick={handleDelete}
-          className="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md"
-        >
-          Delete Post
-        </button>
-      </div>
-
-      <Card className="w-full overflow-hidden rounded-2xl shadow-sm">
-        {/* Hero Image */}
-        {postDetail?.media?.length > 0 && (
-          <div className="grid grid-cols-4 gap-3 px-4">
-            {postDetail.media.map((item: any) => (
-              <div key={item._id} className="relative h-40 w-full">
-                <img
-                  src={item.url}
-                  alt="Post"
-                  className="h-full w-full object-cover rounded-md"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent rounded-md" />
-                <div className="absolute left-2 top-2">
-                  <Badge className="bg-blue-600 text-white text-xs">{postDetail.type}</Badge>
-                </div>
-                {postDetail?.isPinned && (
-                  <Badge variant="secondary" className="absolute right-2 top-2 text-xs">
-                    📌
+        <section className="rounded-2xl border p-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold">{detail.title || "Untitled Post"}</h1>
+                <Badge variant="outline" className="border-primary/40 text-primary">
+                  {formatType(detail.type)}
+                </Badge>
+                {detail.isPinned && (
+                  <Badge variant="outline" className="border-primary/40 text-primary">
+                    Pinned
                   </Badge>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-
-        <CardContent className="space-y-5 p-5">
-          {/* Title */}
-          <div>
-            <h2 className="text-base font-semibold">{postDetail?.title || "-"}</h2>
-            <p className="text-sm text-muted-foreground">{postDetail?.description || "-"}</p>
-          </div>
-
-          {/* Meta */}
-          <div className="grid grid-cols-2 gap-2.5">
-            <MetaItem
-  label="Date"
-  icon={CalendarDays}
-  value={formatDateOnly(postDetail?.dateTime)}
-/>
-
-<MetaItem
-  label="Time"
-  icon={Clock}
-  value={formatTimeOnly(postDetail?.dateTime)}
-/>
-            <MetaItem label="Frequency" icon={RefreshCw} value={postDetail?.frequency} />
-            <MetaItem
-              label="Occurrence"
-              icon={Hash}
-              value={postDetail?.occurrence ? `${postDetail.occurrence} times` : "-"}
-            />
-          </div>
-
-          <Separator />
-
-          {/* User */}
-          {postDetail?.user && (
-            <div className="flex items-start gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback>
-                  {postDetail.user.name
-                    ?.split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col gap-1">
-                <p className="font-semibold leading-none">{postDetail.user.name}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Circle */}
-          {postDetail?.circle?.length > 0 && (
-            <>
-              <Separator />
-              {postDetail.circle.map((c: any) => (
-                <div key={c._id} className="flex gap-3">
-                  <Users className="h-4 w-4" />
-                  <div>
-                    <p>{c.name}</p>
-                    <p className="text-xs">Invite: {c.inviteCode}</p>
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-        </CardContent>
-{/* Comments Section */}
-{comments?.length > 0 && (
-  <>
-    <Separator className="my-4" />
-    <div className="space-y-3">
-      <h3 className="flex items-center gap-2 text-sm font-semibold">
-        <MessageCircle className="h-4 w-4" /> Comments
-      </h3>
-
-      {/* Comment List */}
-      <div className="space-y-2">
-        {comments.map((c: any) => (
-          <div
-            key={c._id}
-            className="flex gap-2 items-start bg-muted/20 rounded-md p-2"
-          >
-            <Avatar className="h-6 w-6">
-              <AvatarFallback>
-                {c.user?.name
-                  ?.split(" ")
-                  .map((n: string) => n[0])
-                  .join("") || "U"}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="text-sm font-medium">{c.user?.name || "User"}</p>
-              <p className="text-sm">{c.text}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatDate(c.createdAt)}
+              <p className="max-w-3xl whitespace-pre-line text-sm text-muted-foreground">
+                {detail.description || "No description"}
               </p>
             </div>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={deleteLoading}
+              onClick={handleDelete}
+              aria-label="Delete post"
+              className="border-primary/30 text-[var(--primary-blue)] hover:text-[var(--primary-blue)] hover:bg-[color:var(--primary-blue)]/5"
+            >
+              {deleteLoading ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+            </Button>
           </div>
-        ))}
+
+          <div className="mt-5 grid gap-4 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-primary">Created</p>
+              <p className="mt-1 text-sm font-medium">{formatDateTimeUs(detail.createdAt)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-primary">Frequency</p>
+              <p className="mt-1 text-sm font-medium">{detail.frequency || "N/A"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-primary">Occurrence</p>
+              <p className="mt-1 text-sm font-medium">{typeof detail.occurrence === "number" ? detail.occurrence : "N/A"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-primary">Media</p>
+              <p className="mt-1 text-sm font-medium">{detail.media?.length || 0}</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-primary">Posted By</h2>
+          <div className="mt-3 flex items-start gap-3 rounded-xl border p-4">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback>{initials(detail.user?.name)}</AvatarFallback>
+            </Avatar>
+            <div className="space-y-1 text-sm">
+              <p className="font-semibold">{detail.user?.name || "Unknown User"}</p>
+              <p className="text-muted-foreground">{detail.user?.email || "No email"}</p>
+              <p className="text-muted-foreground">{detail.user?.phone || "No phone"}</p>
+            </div>
+          </div>
+
+          {!!detail.circle?.length && (
+            <>
+              <Separator className="my-4" />
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-primary">Circles</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {detail.circle.map((circle) => (
+                  <Badge key={circle._id || circle.name} variant="outline" className="border-primary/40 text-primary">
+                    {circle.name || "Unknown Circle"}
+                  </Badge>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+
+        {!!postComments.length && (
+          <section className="rounded-2xl border p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary">
+              <MessageCircle className="h-4 w-4" style={{ color: "var(--primary-blue)" }} />
+              Comments
+            </h2>
+            <div className="space-y-3">
+              {postComments.map((comment) => (
+                <div key={comment._id} className="rounded-xl border p-3">
+                  <p className="text-sm font-medium">{comment.user?.name || "User"}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{comment.text || "No comment text"}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{formatDateTimeUs(comment.createdAt)}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
-  </>
-)}
-        <CardFooter className="flex justify-between text-xs text-muted-foreground">
-          <span>Created: {formatDate(postDetail?.createdAt)}</span>
-          <span>Updated: {formatDate(postDetail?.updatedAt)}</span>
-        </CardFooter>
-      </Card>
-    </div>
   );
-};
-
-export default PostDetailCard;
+}

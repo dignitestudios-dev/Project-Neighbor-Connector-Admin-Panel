@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Neighbor Connector",
+  title: "Neighbor Connector - Admin",
   description: "Neighbor Connector - Admin Dashboard",
   icons: {
     icon: "/images/Logo.png",

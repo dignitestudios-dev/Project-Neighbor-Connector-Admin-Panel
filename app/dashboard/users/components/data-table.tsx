@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Eye,
   CheckCircle2,
   XCircle,
   MapPin,
@@ -51,9 +50,6 @@ interface DataTableProps {
   loading: boolean;
   search: string;
   setSearch: (val: string) => void;
-  accountStatus: "all" | "active" | "deactivated";
-  setAccountStatus: (val: "all" | "active" | "deactivated") => void;
-  onViewUser: (id: string) => void;
 }
 
 const getInitials = (name: string | null, email: string): string => {
@@ -68,41 +64,47 @@ const getInitials = (name: string | null, email: string): string => {
   return email[0]?.toUpperCase() ?? "U";
 };
 
+const truncateText = (value: string | null | undefined, max = 44): string => {
+  if (!value) return "N/A";
+  if (value.length <= max) return value;
+  return `${value.slice(0, max)}...`;
+};
+
 const getAccountStatusStyle = (status: string) => {
   switch (status) {
     case "Active":
-      return "text-green-700 bg-green-50 border-green-200";
+      return "border-primary/40 text-primary";
     case "Inactive":
-      return "text-gray-600 bg-gray-50 border-gray-200";
+      return "border-primary/40 text-primary/80";
     case "Suspended":
-      return "text-red-600 bg-red-50 border-red-200";
+      return "border-primary/40 text-primary";
     default:
-      return "text-gray-600 bg-gray-50 border-gray-200";
+      return "border-primary/40 text-primary/80";
   }
 };
 
 const getCheckInStatusStyle = (status: string | null | undefined) => {
   switch (status) {
     case "Completed":
-      return "text-green-700 bg-green-50 border-green-200";
+      return "border-primary/40 text-primary";
     case "Missed":
-      return "text-red-600 bg-red-50 border-red-200";
+      return "border-primary/40 text-primary";
     case "Pending":
-      return "text-orange-600 bg-orange-50 border-orange-200";
+      return "border-primary/40 text-primary";
     default:
-      return "text-gray-400 bg-gray-50 border-gray-200";
+      return "border-primary/40 text-muted-foreground";
   }
 };
 
 const getJoinedGroupStyle = (joinedGroup: boolean | null | undefined) => {
-  if (joinedGroup === true) return "text-green-700 bg-green-50 border-green-200";
-  if (joinedGroup === false) return "text-gray-600 bg-gray-50 border-gray-200";
-  return "text-gray-500 bg-gray-50 border-gray-200";
+  if (joinedGroup === true) return "border-primary/40 text-primary";
+  if (joinedGroup === false) return "border-primary/40 text-primary/80";
+  return "border-primary/40 text-muted-foreground";
 };
 
 const SkeletonRow = () => (
   <TableRow>
-    {Array.from({ length: 8 }).map((_, i) => (
+    {Array.from({ length: 7 }).map((_, i) => (
       <TableCell key={i}>
         <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
       </TableCell>
@@ -125,9 +127,12 @@ export function DataTable({
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search
+            className="absolute left-3 top-1/2 size-4 -translate-y-1/2"
+            style={{ color: "var(--primary-blue)" }}
+          />
           <Input
             placeholder="Search by name or email..."
             value={search}
@@ -141,18 +146,17 @@ export function DataTable({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-        <Table>
+      <div className="overflow-hidden rounded-xl border">
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Check-in</TableHead>
-              <TableHead>Joined Group</TableHead>
-              <TableHead>Account Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="h-14 w-[220px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">User</TableHead>
+              <TableHead className="h-14 w-[220px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Email</TableHead>
+              <TableHead className="h-14 w-[150px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Phone</TableHead>
+              <TableHead className="h-14 w-[250px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Address</TableHead>
+              <TableHead className="h-14 w-[130px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Check-in</TableHead>
+              <TableHead className="h-14 w-[120px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Joined Group</TableHead>
+              <TableHead className="h-14 w-[130px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Account Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -160,11 +164,15 @@ export function DataTable({
               Array.from({ length: itemsPerPage }).map((_, i) => <SkeletonRow key={i} />)
             ) : users.length ? (
               users.map((user) => (
-                <TableRow key={user._id}>
+                <TableRow
+                  key={user._id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/dashboard/users/${user._id}`)}
+                >
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-blue-100 text-xs font-medium text-blue-700">
+                        <AvatarFallback className="text-xs font-medium text-primary">
                           {getInitials(user.name, user.email)}
                         </AvatarFallback>
                       </Avatar>
@@ -193,19 +201,24 @@ export function DataTable({
                     </span>
                   </TableCell>
 
-                  <TableCell className="max-w-[280px]">
+                  <TableCell className="align-top">
                     <span className="inline-flex items-start gap-1.5 text-sm">
                       <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                      <span className="line-clamp-2">
-                        {user.homeAddress ?? user.address ?? (
-                          <span className="text-muted-foreground">N/A</span>
-                        )}
+                      <span
+                        className="block max-w-[190px] truncate"
+                        title={user.homeAddress ?? user.address ?? "N/A"}
+                      >
+                        {truncateText(user.homeAddress ?? user.address)}
                       </span>
                     </span>
                   </TableCell>
 
                   <TableCell>
-                    <Badge variant="outline" className={getCheckInStatusStyle(user.lastCheckInStatus)}>
+                    <Badge
+                      variant="outline"
+                      className={getCheckInStatusStyle(user.lastCheckInStatus)}
+                      style={{ color: "var(--primary-blue)", borderColor: "var(--primary-blue)" }}
+                    >
                       {user.lastCheckInStatus ?? "N/A"}
                     </Badge>
                   </TableCell>
@@ -235,24 +248,11 @@ export function DataTable({
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 cursor-pointer"
-                        onClick={() => router.push(`/dashboard/users/${user._id}`)}
-                      >
-                        <Eye className="size-4" />
-                        <span className="sr-only">View user</span>
-                      </Button>
-                    </div>
-                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   No users found.
                 </TableCell>
               </TableRow>
@@ -261,7 +261,7 @@ export function DataTable({
         </Table>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center space-x-2">
           <Label className="text-sm font-medium">Show</Label>
           <Select value={itemsPerPage.toString()} onValueChange={(val) => setPageSize(Number(val))}>
@@ -269,10 +269,10 @@ export function DataTable({
               <SelectValue />
             </SelectTrigger>
             <SelectContent side="top">
-              <SelectItem value="10">10</SelectItem>
               <SelectItem value="20">20</SelectItem>
               <SelectItem value="30">30</SelectItem>
               <SelectItem value="50">50</SelectItem>
+              <SelectItem value="10">10</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -288,9 +288,9 @@ export function DataTable({
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage <= 1}
               className="cursor-pointer"
+              aria-label="Previous page"
             >
-              <ChevronLeft className="mr-1 size-4" />
-              Previous
+              <ChevronLeft className="size-4" style={{ color: "var(--primary-blue)" }} />
             </Button>
             <Button
               variant="outline"
@@ -298,9 +298,9 @@ export function DataTable({
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage >= totalPages}
               className="cursor-pointer"
+              aria-label="Next page"
             >
-              Next
-              <ChevronRight className="ml-1 size-4" />
+              <ChevronRight className="size-4" style={{ color: "var(--primary-blue)" }} />
             </Button>
           </div>
         </div>

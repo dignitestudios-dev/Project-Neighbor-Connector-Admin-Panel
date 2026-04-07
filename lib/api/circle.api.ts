@@ -1,5 +1,10 @@
 import { API } from "./axios";
 
+interface ListParams {
+  page?: number;
+  limit?: number;
+}
+
 // ✅ Get Circles
 export const getCircles = async (params: any) => {
   const response = await API.get("/admin/circle", { params });
@@ -13,14 +18,20 @@ export const getCircleById = async (id: string) => {
 };
 
 // ✅ Members
-export const getCircleMembers = async (id: string) => {
-  const response = await API.get(`/admin/circle/${id}/members`);
+export const getCircleMembers = async (id: string, params: ListParams = {}) => {
+  const { page = 1, limit = 10 } = params;
+  const response = await API.get(`/admin/circle/${id}/members`, {
+    params: { page, limit },
+  });
   return response.data;
 };
 
 // ✅ Posts
-export const getCirclePosts = async (id: string) => {
-  const response = await API.get(`/admin/circle/${id}/post`);
+export const getCirclePosts = async (id: string, params: ListParams = {}) => {
+  const { page = 1, limit = 10 } = params;
+  const response = await API.get(`/admin/circle/${id}/post`, {
+    params: { page, limit },
+  });
   return response.data;
 };
 

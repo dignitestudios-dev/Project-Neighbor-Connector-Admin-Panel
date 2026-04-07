@@ -2,28 +2,14 @@
 
 import * as React from "react";
 import {
-  LayoutPanelLeft,
+  Bell,
   LayoutDashboard,
-  Mail,
-  CheckSquare,
-  MessageCircle,
-  Calendar,
-  Shield,
   AlertTriangle,
-  Settings,
-  HelpCircle,
-  CreditCard,
-  LayoutTemplate,
-  Users,
-  BarChart3,
-  Zap,
-  FileText,
-  Circle,
   CircleUserRound,
+  FileText,
   Group,
 } from "lucide-react";
 import Link from "next/link";
-import { Logo } from "@/components/logo";
 import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store";
 
@@ -64,12 +50,12 @@ const data = {
         {
           title: "Users",
           url: "/dashboard/users",
-          icon: Users,
+          icon: CircleUserRound,
         },
         {
           title: "Notifications",
           url: "/dashboard/Notification",
-          icon: BarChart3,
+          icon: Bell,
         },
         {
           title: "Circles",
@@ -85,7 +71,7 @@ const data = {
         {
           title: "Reports",
           url: "/dashboard/Reports",
-          icon: FileText,
+          icon: AlertTriangle,
         }
         
       ],

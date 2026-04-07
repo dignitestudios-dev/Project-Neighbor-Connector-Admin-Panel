@@ -5,11 +5,6 @@ import { useDispatch, useSelector } from "react-redux";
 
 import {
   fetchUsers,
-  fetchUserById,
-  fetchUserPosts,
-  fetchUserEmergencyContacts,
-  fetchUserReported,
-  fetchUserReports,
 } from "@/lib/slices/userSlice";
 
 import { RootState, AppDispatch } from "@/lib/store";
@@ -23,16 +18,11 @@ export default function UsersPage() {
     pagination,
     loading,
   } = useSelector((state: RootState) => state.users);
-  console.log("users", users);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [pageSize, setPageSize] = useState(30);
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  const [accountStatus, setAccountStatus] = useState<"all" | "active" | "deactivated">("all");
 
   // debounce
   useEffect(() => {
@@ -55,22 +45,6 @@ export default function UsersPage() {
     );
   }, [dispatch, currentPage, pageSize, debouncedSearch ]);
 
-  // user detail APIs
-  useEffect(() => {
-    if (selectedUserId) {
-      dispatch(fetchUserById(selectedUserId));
-      dispatch(fetchUserPosts(selectedUserId));
-      dispatch(fetchUserEmergencyContacts(selectedUserId));
-      dispatch(fetchUserReported(selectedUserId));
-      dispatch(fetchUserReports(selectedUserId));
-    }
-  }, [dispatch, selectedUserId]);
-
-  // reset page on search
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch]);
-
   const paginationData = {
     currentPage: pagination?.currentPage ?? currentPage,
     itemsPerPage: pagination?.itemsPerPage ?? pageSize,
@@ -86,7 +60,7 @@ export default function UsersPage() {
   return (
     <div className="flex flex-col gap-4">
 
-      <h1 className="text-2xl font-bold">Users</h1>
+      <h1 className="text-2xl font-bold" style={{ color: "var(--primary-blue)" }}>Users</h1>
 
       <div className="@container/main px-4 lg:px-6 mt-8 lg:mt-12">
         <DataTable
@@ -95,12 +69,10 @@ export default function UsersPage() {
           loading={loading}
 
           search={search}
-          setSearch={setSearch}
-
-          accountStatus={accountStatus}
-          setAccountStatus={setAccountStatus}
-
-          onViewUser={(id: string) => setSelectedUserId(id)}
+          setSearch={(value) => {
+            setCurrentPage(1);
+            setSearch(value);
+          }}
         />
       </div>
     </div>

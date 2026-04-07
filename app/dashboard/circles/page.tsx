@@ -7,7 +7,6 @@ import { DataTable } from "./components/data-table";
 import { fetchCircles } from "@/lib/slices/circleSlice";
 import { useRouter } from "next/navigation";
 
-
 export default function CirclesPage() {
   const dispatch = useDispatch<AppDispatch>();
 
@@ -15,7 +14,7 @@ export default function CirclesPage() {
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-const router = useRouter();
+  const router = useRouter();
   const { pagination, loading, circles } = useSelector(
     (state: RootState) => state.circles
   );
@@ -35,20 +34,20 @@ const router = useRouter();
         search: debouncedSearch,
       })
     );
-  }, [currentPage, pageSize, debouncedSearch]);
+  }, [dispatch, currentPage, pageSize, debouncedSearch]);
 
   const paginationData = {
     currentPage: pagination?.currentPage ?? currentPage,
     itemsPerPage: pagination?.itemsPerPage ?? pageSize,
     totalPages: pagination?.totalPages ?? 1,
-   
+    totalItems: pagination?.totalItems ?? 0,
     setCurrentPage,
     setPageSize,
   };
 
-const handleView = (id: string) => {
-  router.push(`/dashboard/circles/${id}`);
-};
+  const handleView = (id: string) => {
+    router.push(`/dashboard/circles/${id}`);
+  };
 
   return (
     <div className="p-4 space-y-4">

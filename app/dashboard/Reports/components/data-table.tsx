@@ -1,9 +1,17 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState } from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -12,7 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
   Dialog,
   DialogContent,
@@ -20,65 +27,89 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Check, Eye, X, AlertTriangle, MessageSquare, Calendar, RefreshCw, Info, User } from "lucide-react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import {
+  AlertTriangle,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Info,
+  Loader2,
+  User,
+  X,
+} from "lucide-react";
 
 interface ReportUser {
   _id: string;
-  fullName: string;
-  username: string;
-  emailAddress: string;
   reason: string;
-  description: string;
   status: string;
   type: string;
   createdAt: string;
-  updatedAt: string;
-
-  // ✅ ADD THESE (no keyword change)
   reported?: {
+    _id?: string;
     name?: string;
-    bio?: string;
+    title?: string;
+    description?: string;
   };
-
   reportedBy?: {
+    _id?: string;
     name?: string;
     email?: string;
+    profilePicture?: string;
   };
+  targetModel?: string;
+}
+
+interface PaginationData {
+  currentPage: number;
+  itemsPerPage: number;
+  totalPages: number;
+  totalItems?: number;
+  setCurrentPage: (page: number) => void;
+  setPageSize: (size: number) => void;
 }
 
 interface DataTableProps {
   reports: ReportUser[];
   loading: boolean;
-  pagination: any;
+  pagination: PaginationData;
   status: string;
   type: string;
   setStatus: (status: string) => void;
   setType: (type: string) => void;
-  handleAction: (id: string, action: "accept" | "reject") => void;
+  handleAction: (id: string, action: "accept" | "reject") => Promise<void> | void;
 }
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
-
 const formatDate = (dateStr?: string): string => {
-  if (!dateStr) return "—";
-  try {
-    return new Date(dateStr).toLocaleDateString("en-PK", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateStr;
-  }
+  if (!dateStr) return "N/A";
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "N/A";
+  return date.toLocaleString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 };
 
-// ─── DataTable ────────────────────────────────────────────────────────────────
+const toTitle = (value?: string) => (value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : "N/A");
+
+const getReportedEntityName = (report: ReportUser) =>
+  report.reported?.name || report.reported?.title || report.targetModel || "N/A";
+
+const getReportedEntityDetails = (report: ReportUser) =>
+  report.reported?.description || report.reason || "No details available";
+
+const SkeletonRow = () => (
+  <TableRow>
+    {Array.from({ length: 6 }).map((_, i) => (
+      <TableCell key={i}>
+        <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
+      </TableCell>
+    ))}
+  </TableRow>
+);
 
 export function DataTable({
   reports,
@@ -90,283 +121,310 @@ export function DataTable({
   setType,
   handleAction,
 }: DataTableProps) {
-
-  // Modal state
   const [selectedReport, setSelectedReport] = useState<ReportUser | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  console.log("selectedReport", selectedReport);
-  const handleView = (report: ReportUser) => {
-    setSelectedReport(report);
-    setIsModalOpen(true);
-  };
+  const [activeAction, setActiveAction] = useState<{ id: string; action: "accept" | "reject" } | null>(null);
+  const { currentPage, itemsPerPage, totalPages, totalItems = 0, setCurrentPage, setPageSize } = pagination;
 
-  const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    pagination.setPageSize(Number(e.target.value));
-    pagination.setCurrentPage(1);
-  };
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
-  const handlePreviousPage = () => {
-    if (pagination.currentPage > 1)
-      pagination.setCurrentPage(pagination.currentPage - 1);
-  };
-
-  const handleNextPage = () => {
-    if (pagination.currentPage < pagination.totalPages)
-      pagination.setCurrentPage(pagination.currentPage + 1);
-  };
-  const router = useRouter();
   return (
     <div className="w-full space-y-4">
-
-      {/* ── Filters ── */}
-      <div className={`grid gap-2 sm:grid-cols-3 sm:gap-4`}>
-        <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Type</Label>
-            <select
+            <Select
               value={type}
-              onChange={(e) => { setType(e.target.value); pagination.setCurrentPage(1); }}
-              className="w-full border rounded px-2 py-1"
+              onValueChange={(value) => {
+                setType(value);
+                setCurrentPage(1);
+              }}
             >
-              <option value="all">All</option>
-              <option value="post">Post</option>
-              <option value="comment">Comment</option>
-              <option value="user">User</option>
-              <option value="chatroom">Chatroom</option>
-              <option value="circle">Circle</option>
-            </select>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="post">Post</SelectItem>
+                <SelectItem value="comment">Comment</SelectItem>
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="chatroom">Chatroom</SelectItem>
+                <SelectItem value="circle">Circle</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
             <Label>Status</Label>
-            <select
+            <Select
               value={status}
-              onChange={(e) => { setStatus(e.target.value); pagination.setCurrentPage(1); }}
-              className="w-full border rounded px-2 py-1"
+              onValueChange={(value) => {
+                setStatus(value);
+                setCurrentPage(1);
+              }}
             >
-            
-              <option value="pending">Pending</option>
-              <option value="resolve">Resolved</option>
-            </select>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="resolve">Resolved</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
+
+        <p className="text-sm text-muted-foreground">
+          Showing <span className="font-medium">{startItem}-{endItem}</span> of{" "}
+          <span className="font-medium">{totalItems}</span>
+        </p>
       </div>
 
-      {/* ── Table ── */}
-      <div className="rounded-md border">
-        <Table>
+      <div className="overflow-hidden rounded-xl border">
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead>Reported By</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Reason</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="h-14 w-[250px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Reported By</TableHead>
+              <TableHead className="h-14 w-[140px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Type</TableHead>
+              <TableHead className="h-14 text-[11px] font-semibold uppercase tracking-wide text-primary/70">Reason</TableHead>
+              <TableHead className="h-14 w-[170px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Date</TableHead>
+              <TableHead className="h-14 w-[120px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Status</TableHead>
+              <TableHead className="h-14 w-[150px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
-                  <LoadingSpinner size="md" />
-                </TableCell>
-              </TableRow>
+              Array.from({ length: itemsPerPage }).map((_, i) => <SkeletonRow key={i} />)
             ) : reports?.length ? (
-              reports.map((report: ReportUser) => (
+              reports.map((report) => (
                 <TableRow key={report._id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarFallback>{report.fullName?.[0] || report.username?.[0]}</AvatarFallback>
+                        <AvatarFallback className="text-xs font-medium text-primary">
+                          {report.reportedBy?.name?.[0]?.toUpperCase() || "U"}
+                        </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div>{report.fullName}</div>
-                        <div className="text-sm text-gray-500">{report.emailAddress}</div>
+                        <p className="font-medium">{report.reportedBy?.name || "Unknown User"}</p>
+                        <p className="text-xs text-muted-foreground">{report.reportedBy?.email || "No email"}</p>
                       </div>
                     </div>
                   </TableCell>
 
-                  <TableCell className="capitalize">{report.type}</TableCell>
-                  <TableCell>{report.reason}</TableCell>
-                  <TableCell>{new Date(report.createdAt).toLocaleDateString()}</TableCell>
-
                   <TableCell>
-                    <Badge
-                      className="capitalize"
-                      variant="secondary"
-                    >
-                      Pending
+                    <Badge variant="outline" className="border-primary/40 text-primary">
+                      {toTitle(report.type)}
                     </Badge>
                   </TableCell>
-
+                  <TableCell>{report.reason || "N/A"}</TableCell>
+                  <TableCell>{formatDate(report.createdAt)}</TableCell>
                   <TableCell>
                     <Badge
-                      className="capitalize"
-                      variant={
-                        report.status === "resolve" ? "default" :
-                        report.status === "reject" ? "destructive" : "secondary"
+                      variant="outline"
+                      className={
+                        report.status === "resolve"
+                          ? "border-primary/40 text-primary"
+                          : report.status === "reject"
+                            ? "border-primary/40 text-[var(--primary-blue)]"
+                            : "border-primary/40 text-primary"
                       }
                     >
-                      {report.status}
+                      {toTitle(report.status)}
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="flex gap-2">
-                    {/* 👁 VIEW → modal khulega */}
-                    <Button onClick={() => handleView(report)} size="icon" variant="ghost">
-                      <Eye className="size-4" />
-                    </Button>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        onClick={() => {
+                          setSelectedReport(report);
+                          setIsModalOpen(true);
+                        }}
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 border-primary/30"
+                      >
+                        <Eye className="size-4" style={{ color: "var(--primary-blue)" }} />
+                      </Button>
 
-                    {report.status === "pending" && (
-                      <>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => handleAction(report._id, "accept")}
-                        >
-                          <Check className="size-4 text-green-600" />
-                        </Button>
+                      {report.status === "pending" && (
+                        <>
+                          {(() => {
+                            const rowBusy = activeAction?.id === report._id;
+                            const acceptLoading = rowBusy && activeAction?.action === "accept";
+                            const rejectLoading = rowBusy && activeAction?.action === "reject";
+                            return (
+                              <>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8 border-primary/30"
+                            disabled={rowBusy}
+                            onClick={async () => {
+                              try {
+                                setActiveAction({ id: report._id, action: "accept" });
+                                await handleAction(report._id, "accept");
+                              } finally {
+                                setActiveAction(null);
+                              }
+                            }}
+                          >
+                            {acceptLoading ? (
+                              <Loader2 className="size-4 animate-spin text-primary" />
+                            ) : (
+                              <Check className="size-4 text-primary" />
+                            )}
+                          </Button>
 
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => handleAction(report._id, "reject")}
-                        >
-                          <X className="size-4 text-red-600" />
-                        </Button>
-                      </>
-                    )}
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8 border-primary/30"
+                            disabled={rowBusy}
+                            onClick={async () => {
+                              try {
+                                setActiveAction({ id: report._id, action: "reject" });
+                                await handleAction(report._id, "reject");
+                              } finally {
+                                setActiveAction(null);
+                              }
+                            }}
+                          >
+                            {rejectLoading ? (
+                              <Loader2 className="size-4 animate-spin" style={{ color: "var(--primary-blue)" }} />
+                            ) : (
+                              <X className="size-4" style={{ color: "var(--primary-blue)" }} />
+                            )}
+                          </Button>
+                              </>
+                            );
+                          })()}
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">No results</TableCell>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  No results
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
 
-      {/* ── Pagination ── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between py-4 space-y-2 sm:space-y-0">
+      <div className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center space-x-2">
-          <span className="text-sm">Items per page:</span>
-          <select
-            value={pagination.itemsPerPage}
-            onChange={handlePageSizeChange}
-            className="border rounded px-2 py-1 text-sm"
+          <Label className="text-sm font-medium">Show</Label>
+          <Select
+            value={itemsPerPage.toString()}
+            onValueChange={(value) => {
+              setPageSize(Number(value));
+              setCurrentPage(1);
+            }}
           >
-            {[5, 10, 20, 50].map((size) => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-20 cursor-pointer">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent side="top">
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="30">30</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={pagination.currentPage <= 1}>
-            Previous
-          </Button>
-          <span className="text-sm font-medium">
-            Page {pagination.currentPage} of {pagination.totalPages}
-          </span>
-          <Button variant="outline" size="sm" onClick={handleNextPage} disabled={pagination.currentPage >= pagination.totalPages}>
-            Next
-          </Button>
+        <div className="flex items-center space-x-3">
+          <p className="text-sm text-muted-foreground">
+            Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
+          </p>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="size-4" style={{ color: "var(--primary-blue)" }} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              aria-label="Next page"
+            >
+              <ChevronRight className="size-4" style={{ color: "var(--primary-blue)" }} />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* ── Report Detail Modal ── */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden">
-          <DialogHeader className="px-5 pt-5 pb-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-base font-semibold">Report Detail</DialogTitle>
-              {selectedReport && (
-                <Badge
-                  className={`text-xs font-medium border ${
-                    selectedReport.status === "resolve"
-                      ? "bg-green-100 text-green-700 border-green-200"
-                      : selectedReport.status === "reject"
-                      ? "bg-red-100 text-red-700 border-red-200"
-                      : "bg-yellow-100 text-yellow-700 border-yellow-200"
-                  }`}
-                >
-                  {selectedReport.status}
-                </Badge>
-              )}
-            </div>
+        <DialogContent className="max-w-3xl rounded-2xl p-0">
+          <DialogHeader className="border-b px-6 py-4">
+            <DialogTitle className="text-base font-semibold">Report Details</DialogTitle>
           </DialogHeader>
 
           {selectedReport && (
-            <div className="space-y-4 px-5 pb-5 pt-4 max-h-[75vh] overflow-y-auto">
-
-              {/* Meta info grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { icon: AlertTriangle, label: "Reason", value: selectedReport.reason },
-                  { icon: MessageSquare, label: "Type", value: selectedReport.type },
-                  { icon: Info, label: "Description", value: selectedReport?.reported?.bio },
-                  { icon: User, label: "Username", value: selectedReport?.reported?.name },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-start gap-2">
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted">
-                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-                      <p className="text-sm font-medium capitalize">{value}</p>
-                    </div>
-                  </div>
-                ))}
+            <div className="max-h-[75vh] space-y-5 overflow-y-auto px-6 py-5">
+              <div className="flex items-center justify-between rounded-xl border p-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Status</p>
+                  <Badge variant="outline" className="mt-2 border-primary/40 text-primary">
+                    {toTitle(selectedReport.status)}
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Created</p>
+                  <p className="mt-2 text-sm font-medium">{formatDate(selectedReport.createdAt)}</p>
+                </div>
               </div>
 
-              <Separator />
-
-              {/* Reported By */}
-              <div className="space-y-2">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Reported By</p>
-                <div className="flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3">
-                  <Avatar className="h-10 w-10 border">
-                    <AvatarFallback className="bg-blue-100 text-blue-700 text-xs font-medium">
-                      {selectedReport.reportedBy?.name?.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-semibold">{selectedReport.reportedBy?.name}</p>
-                    <p className="text-xs text-muted-foreground">{selectedReport.reportedBy?.email}</p>
-                  </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border p-4">
+                  <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                    <User className="h-3.5 w-3.5" /> Reported By
+                  </p>
+                  <p className="text-sm font-semibold">{selectedReport.reportedBy?.name || "Unknown User"}</p>
+                  <p className="text-xs text-muted-foreground">{selectedReport.reportedBy?.email || "No email"}</p>
+                </div>
+                <div className="rounded-xl border p-4">
+                  <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                    <AlertTriangle className="h-3.5 w-3.5" /> Report Type
+                  </p>
+                  <p className="text-sm font-semibold">{toTitle(selectedReport.type)}</p>
+                  <p className="text-xs text-muted-foreground">{selectedReport.targetModel || "N/A"}</p>
                 </div>
               </div>
 
               <Separator />
 
-              {/* Timestamps */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { icon: Calendar, label: "Created At", value: formatDate(selectedReport.createdAt) },
-                  { icon: RefreshCw, label: "Updated At", value: formatDate(selectedReport.updatedAt) },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-start gap-2">
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted">
-                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-                      <p className="text-sm font-medium">{value}</p>
-                    </div>
-                  </div>
-                ))}
+              <div className="space-y-3 rounded-xl border p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Reason</p>
+                <p className="text-sm font-medium">{selectedReport.reason || "N/A"}</p>
               </div>
 
+              <div className="space-y-3 rounded-xl border p-4">
+                <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  <Info className="h-3.5 w-3.5" /> Reported Entity
+                </p>
+                <p className="text-sm font-semibold">{getReportedEntityName(selectedReport)}</p>
+                <p className="text-sm text-muted-foreground">{getReportedEntityDetails(selectedReport)}</p>
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

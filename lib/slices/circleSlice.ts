@@ -18,6 +18,8 @@ interface ApiCircle {
   name: string;
   inviteCode: string;
   isActive: boolean;
+  isAdmin?: boolean;
+  isDeactivatedByAdmin?: boolean;
   createdAt: string;
   updatedAt: string;
   usersCount: number;
@@ -36,12 +38,15 @@ interface CircleState {
   members: any[];
   posts: any[];
   pagination: Pagination | null;
+  membersPagination: Pagination | null;
+  postsPagination: Pagination | null;
   loading: boolean;
   detailLoading: boolean;
   error: string | null;
   membersLoading: boolean;
   postsLoading: boolean;
   adminloading: boolean;
+  memberActionLoading: Record<string, boolean>;
 }
 
 const initialState: CircleState = {
@@ -50,12 +55,15 @@ const initialState: CircleState = {
   members: [],
   posts: [],
   pagination: null,
+  membersPagination: null,
+  postsPagination: null,
   loading: false,
   detailLoading: false,
   error: null,
   membersLoading: false,
   postsLoading: false,
   adminloading: false,
+  memberActionLoading: {},
 };
 
 // ---------------- THUNKS ----------------
@@ -87,9 +95,19 @@ export const fetchCircleById = createAsyncThunk(
 // ✅ Members
 export const fetchCircleMembers = createAsyncThunk(
   "circles/fetchCircleMembers",
-  async (id: string, thunkAPI) => {
+  async (
+    params: { id: string; page?: number; limit?: number } | string,
+    thunkAPI
+  ) => {
     try {
-      return await getCircleMembers(id);
+      const normalized =
+        typeof params === "string"
+          ? { id: params, page: 1, limit: 10 }
+          : { id: params.id, page: params.page ?? 1, limit: params.limit ?? 10 };
+      return await getCircleMembers(normalized.id, {
+        page: normalized.page,
+        limit: normalized.limit,
+      });
     } catch (error: any) {
       return thunkAPI.rejectWithValue(error.message);
     }
@@ -99,9 +117,19 @@ export const fetchCircleMembers = createAsyncThunk(
 // ✅ Posts
 export const fetchCirclePosts = createAsyncThunk(
   "circles/fetchCirclePosts",
-  async (id: string, thunkAPI) => {
+  async (
+    params: { id: string; page?: number; limit?: number } | string,
+    thunkAPI
+  ) => {
     try {
-      return await getCirclePosts(id);
+      const normalized =
+        typeof params === "string"
+          ? { id: params, page: 1, limit: 10 }
+          : { id: params.id, page: params.page ?? 1, limit: params.limit ?? 10 };
+      return await getCirclePosts(normalized.id, {
+        page: normalized.page,
+        limit: normalized.limit,
+      });
     } catch (error: any) {
       return thunkAPI.rejectWithValue(error.message);
     }
@@ -215,6 +243,7 @@ const circleSlice = createSlice({
     builder.addCase(fetchCircleMembers.fulfilled, (state, action) => {
       state.membersLoading = false;
       state.members = action.payload?.data || [];
+      state.membersPagination = action.payload?.pagination || null;
     });
 
 
@@ -225,6 +254,7 @@ const circleSlice = createSlice({
     builder.addCase(fetchCirclePosts.fulfilled, (state, action) => {
       state.postsLoading = false;
       state.posts = action.payload?.data || [];
+      state.postsPagination = action.payload?.pagination || null;
     });
 
     // ✅ Update Name (🔥 FULL FIX)
@@ -273,11 +303,15 @@ const circleSlice = createSlice({
       
     // ✅ Toggle Admin
     builder
-      .addCase(toggleCircleAdminThunk.pending, (state) => {
+      .addCase(toggleCircleAdminThunk.pending, (state, action) => {
         state.adminloading = true;
+        const memberKey = action.meta.arg.userId;
+        state.memberActionLoading[memberKey] = true;
       })
       .addCase(toggleCircleAdminThunk.fulfilled, (state, action) => {
         state.adminloading = false;
+        const memberKey = action.meta.arg.userId;
+        state.memberActionLoading[memberKey] = false;
         
         // Update members list
         state.members = state.members.map((member) =>
@@ -285,8 +319,24 @@ const circleSlice = createSlice({
         );
       })
       .addCase(toggleCircleAdminThunk.rejected, (state, action) => {
+        const memberKey = action.meta.arg.userId;
+        state.memberActionLoading[memberKey] = false;
         state.loading = false;
         state.error = action.payload as string;
+      });
+
+    builder
+      .addCase(removeMemberFromCircleThunk.pending, (state, action) => {
+        const memberKey = action.meta.arg.userId;
+        state.memberActionLoading[memberKey] = true;
+      })
+      .addCase(removeMemberFromCircleThunk.fulfilled, (state, action) => {
+        const memberKey = action.meta.arg.userId;
+        state.memberActionLoading[memberKey] = false;
+      })
+      .addCase(removeMemberFromCircleThunk.rejected, (state, action) => {
+        const memberKey = action.meta.arg.userId;
+        state.memberActionLoading[memberKey] = false;
       });
   },
 });
