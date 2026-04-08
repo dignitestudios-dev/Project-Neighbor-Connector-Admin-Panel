@@ -40,12 +40,19 @@ export const deletePostById = async (id: string) => {
   }
 };
 export const getCommentById = async (id: string, circleId: string) => {
- 
-
   try {
     const response = await API.get(`/admin/post/comments/${id}?circle=${circleId}`);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || "Failed to get comment");
+  }
+};
+
+export const getCommentReplies = async (commentId: string) => {
+  try {
+    const response = await API.get(`/admin/post/comments/${commentId}/replies`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to get replies");
   }
 };

@@ -7,14 +7,34 @@ import { ChevronLeft, Loader2, MessageCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AppDispatch, RootState } from "@/lib/store";
-import { fetchDeletePostById, fetchGetCommentById, fetchPostById } from "@/lib/slices/postSlice";
+import {
+  fetchDeletePostById,
+  fetchGetCommentById,
+  fetchGetCommentReplies,
+  fetchPostById,
+} from "@/lib/slices/postSlice";
 
 type PostMedia = { _id?: string; url?: string; type?: "image" | "video" };
 type PostUser = { _id?: string; name?: string; email?: string; phone?: string };
 type PostCircle = { _id?: string; name?: string };
-type PostComment = { _id?: string; text?: string; createdAt?: string; user?: { name?: string } };
+
+type CommentUser = {
+  _id?: string;
+  name?: string;
+  email?: string;
+  profilePicture?: string;
+};
+
+type PostComment = {
+  _id?: string;
+  description?: string;
+  createdAt?: string;
+  user?: CommentUser;
+  replies?: number;
+};
 
 type PostDetailShape = {
   _id: string;
@@ -68,11 +88,124 @@ function DetailSkeleton() {
   );
 }
 
+function CommentsSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="rounded-xl border p-4 space-y-2">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <div className="space-y-1.5 flex-1">
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+          </div>
+          <Skeleton className="h-3.5 w-4/5 ml-12" />
+          <Skeleton className="h-3 w-20 ml-12" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReplyItem({ reply }: { reply: PostComment }) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg bg-muted/40 border p-3">
+      <Avatar className="h-7 w-7 shrink-0">
+        {reply.user?.profilePicture && (
+          <AvatarImage src={reply.user.profilePicture} alt={reply.user.name} />
+        )}
+        <AvatarFallback className="text-[10px]">{initials(reply.user?.name)}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0 space-y-0.5">
+        <p className="text-sm font-medium leading-tight">{reply.user?.name || "User"}</p>
+        <p className="text-xs text-muted-foreground">{reply.user?.email}</p>
+        <p className="text-sm text-foreground mt-1">{reply.description || "No text"}</p>
+        <p className="text-xs text-muted-foreground">{formatDateTimeUs(reply.createdAt)}</p>
+      </div>
+    </div>
+  );
+}
+
+function CommentItem({
+  comment,
+  onLoadReplies,
+  replies,
+  repliesLoading,
+}: {
+  comment: PostComment;
+  onLoadReplies: (id: string) => void;
+  replies?: PostComment[];
+  repliesLoading?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const hasReplies = (comment.replies ?? 0) > 0;
+
+  const handleRepliesClick = () => {
+    if (!expanded && !replies) {
+      onLoadReplies(comment._id!);
+    }
+    setExpanded((prev) => !prev);
+  };
+
+  return (
+    <div className="rounded-xl border p-4 space-y-3">
+      <div className="flex items-start gap-3">
+        <Avatar className="h-9 w-9 shrink-0">
+          {comment.user?.profilePicture && (
+            <AvatarImage src={comment.user.profilePicture} alt={comment.user.name} />
+          )}
+          <AvatarFallback className="text-xs">{initials(comment.user?.name)}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0 space-y-0.5">
+          <p className="text-sm font-semibold leading-tight">{comment.user?.name || "User"}</p>
+          <p className="text-xs text-muted-foreground">{comment.user?.email}</p>
+        </div>
+        <p className="text-xs text-muted-foreground shrink-0">{formatDateTimeUs(comment.createdAt)}</p>
+      </div>
+
+      <p className="text-sm text-foreground">{comment.description || "No comment text"}</p>
+
+      {hasReplies && (
+        <button
+          onClick={handleRepliesClick}
+          className="text-xs font-medium underline underline-offset-2 transition-opacity hover:opacity-70"
+          style={{ color: "var(--primary-blue)" }}
+        >
+          {expanded ? "Hide" : `View`} {comment.replies} {comment.replies === 1 ? "reply" : "replies"}
+        </button>
+      )}
+
+      {expanded && (
+        <div className="ml-3 border-l-2 pl-4 space-y-2" style={{ borderColor: "var(--primary-blue)" }}>
+          {repliesLoading ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Skeleton className="h-7 w-7 rounded-full" />
+                  <div className="space-y-1 flex-1">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            replies?.map((reply) => <ReplyItem key={reply._id} reply={reply} />)
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PostDetailPage() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const { postDetail, comments } = useSelector((state: RootState) => state.posts);
+  const { postDetail, comments, commentsLoading, repliesMap, repliesLoadingMap } = useSelector(
+    (state: RootState) => state.posts
+  );
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
@@ -97,6 +230,10 @@ export default function PostDetailPage() {
     } finally {
       setDeleteLoading(false);
     }
+  };
+
+  const handleLoadReplies = (commentId: string) => {
+    dispatch(fetchGetCommentReplies(commentId));
   };
 
   const detail = useMemo(() => postDetail as PostDetailShape | null, [postDetail]);
@@ -142,7 +279,7 @@ export default function PostDetailPage() {
               disabled={deleteLoading}
               onClick={handleDelete}
               aria-label="Delete post"
-              className="border-primary/30 text-[var(--primary-blue)] hover:text-[var(--primary-blue)] hover:bg-[color:var(--primary-blue)]/5"
+              className="border-primary/30 text-primary-blue hover:text-primary-blue hover:bg-(--primary-blue)/5"
             >
               {deleteLoading ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
             </Button>
@@ -196,24 +333,40 @@ export default function PostDetailPage() {
           )}
         </section>
 
-        {!!postComments.length && (
-          <section className="rounded-2xl border p-6">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary">
-              <MessageCircle className="h-4 w-4" style={{ color: "var(--primary-blue)" }} />
-              Comments
-            </h2>
+        <section className="rounded-2xl border p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary">
+            <MessageCircle className="h-4 w-4" style={{ color: "var(--primary-blue)" }} />
+            Comments
+            {!commentsLoading && postComments.length > 0 && (
+              <span
+                className="ml-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white"
+                style={{ background: "var(--primary-blue)" }}
+              >
+                {postComments.length}
+              </span>
+            )}
+          </h2>
+
+          {commentsLoading ? (
+            <CommentsSkeleton />
+          ) : postComments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No comments yet.</p>
+          ) : (
             <div className="space-y-3">
               {postComments.map((comment) => (
-                <div key={comment._id} className="rounded-xl border p-3">
-                  <p className="text-sm font-medium">{comment.user?.name || "User"}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{comment.text || "No comment text"}</p>
-                  <p className="mt-2 text-xs text-muted-foreground">{formatDateTimeUs(comment.createdAt)}</p>
-                </div>
+                <CommentItem
+                  key={comment._id}
+                  comment={comment}
+                  onLoadReplies={handleLoadReplies}
+                  replies={comment._id ? repliesMap[comment._id] : undefined}
+                  repliesLoading={comment._id ? repliesLoadingMap[comment._id] : false}
+                />
               ))}
             </div>
-          </section>
-        )}
+          )}
+        </section>
       </div>
     </div>
   );
 }
+

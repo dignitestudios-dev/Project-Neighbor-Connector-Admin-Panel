@@ -1,6 +1,6 @@
 "use client";
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { deletePostById, getCommentById, getPostById, getPosts } from "../api/post.api";
+import { deletePostById, getCommentById, getCommentReplies, getPostById, getPosts } from "../api/post.api";
 
 
 interface PostUser {
@@ -49,6 +49,9 @@ export interface Pagination {
 
 interface PostState {
   comments: any[];
+  commentsLoading: boolean;
+  repliesMap: Record<string, any[]>;
+  repliesLoadingMap: Record<string, boolean>;
   posts: Post[];
   postDetail: Post | null;
   pagination: Pagination | null;
@@ -58,6 +61,9 @@ interface PostState {
 
 const initialState: PostState = {
   comments: [],
+  commentsLoading: false,
+  repliesMap: {},
+  repliesLoadingMap: {},
   posts: [],
   postDetail: null,
   pagination: null,
@@ -128,10 +134,24 @@ export const fetchGetCommentById = createAsyncThunk(
   async (params: FetchCommentByIdParams, thunkAPI: any) => {
     try {
       const response = await getCommentById(params.id, params.circleId);
-      return response; // API returns single Post object
+      return response;
     } catch (error: any) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to get comment"
+      );
+    }
+  }
+);
+
+export const fetchGetCommentReplies = createAsyncThunk(
+  "posts/fetchGetCommentReplies",
+  async (commentId: string, thunkAPI: any) => {
+    try {
+      const response = await getCommentReplies(commentId);
+      return { commentId, data: response.data };
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to get replies"
       );
     }
   }
@@ -189,16 +209,30 @@ const postSlice = createSlice({
     // fetchGetCommentById
     builder
       .addCase(fetchGetCommentById.pending, (state) => {
-        state.loading = true;
+        state.commentsLoading = true;
         state.error = null;
       })
       .addCase(fetchGetCommentById.fulfilled, (state, action) => {
-        state.loading = false;
+        state.commentsLoading = false;
         state.comments = action.payload?.data;
       })
       .addCase(fetchGetCommentById.rejected, (state, action) => {
-        state.loading = false;
+        state.commentsLoading = false;
         state.error = action.error.message || "Failed to get comment";
+      });
+
+    // fetchGetCommentReplies
+    builder
+      .addCase(fetchGetCommentReplies.pending, (state, action) => {
+        state.repliesLoadingMap[action.meta.arg] = true;
+      })
+      .addCase(fetchGetCommentReplies.fulfilled, (state, action) => {
+        const { commentId, data } = action.payload;
+        state.repliesLoadingMap[commentId] = false;
+        state.repliesMap[commentId] = data;
+      })
+      .addCase(fetchGetCommentReplies.rejected, (state, action) => {
+        state.repliesLoadingMap[action.meta.arg] = false;
       });
   },
 });
