@@ -45,10 +45,10 @@ export default function HeavyChartsPage({ charts, loading }: HeavyChartsPageProp
   <LineChart
     data={charts.map(item => ({
       ...item,
-      date: new Date(item.date).toLocaleDateString('en-GB', {
+      date: new Date(item.date).toLocaleDateString('en-US', {
+        month: '2-digit',
         day: '2-digit',
-        month: 'short',
-      }), // 07 Apr format
+      }), // 04/07 format
     }))}
   >
     <CartesianGrid strokeDasharray="3 3" />
@@ -56,9 +56,9 @@ export default function HeavyChartsPage({ charts, loading }: HeavyChartsPageProp
     <YAxis />
     <Tooltip
       labelFormatter={(label) =>
-        `Date: ${new Date(label).toLocaleDateString('en-GB', {
+        `Date: ${new Date(label).toLocaleDateString('en-US', {
+          month: '2-digit',
           day: '2-digit',
-          month: 'short',
           year: 'numeric',
         })}`
       }

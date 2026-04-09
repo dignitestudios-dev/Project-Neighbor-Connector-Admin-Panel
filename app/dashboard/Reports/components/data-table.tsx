@@ -84,12 +84,10 @@ const formatDate = (dateStr?: string): string => {
   if (!dateStr) return "N/A";
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return "N/A";
-  return date.toLocaleString("en-US", {
+  return date.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 };
 
@@ -183,7 +181,7 @@ export function DataTable({
       </div>
 
       <div className="overflow-hidden rounded-xl border">
-        <Table className="table-fixed">
+        <Table className="">
           <TableHeader>
             <TableRow>
               <TableHead className="h-14 w-[250px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Reported By</TableHead>

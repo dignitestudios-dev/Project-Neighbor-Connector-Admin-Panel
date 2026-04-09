@@ -64,7 +64,7 @@ const getInitials = (name: string | null, email: string): string => {
   return email[0]?.toUpperCase() ?? "U";
 };
 
-const truncateText = (value: string | null | undefined, max = 44): string => {
+const truncateText = (value: string | null | undefined, max = 24): string => {
   if (!value) return "N/A";
   if (value.length <= max) return value;
   return `${value.slice(0, max)}...`;
@@ -190,7 +190,7 @@ export function DataTable({
                   <TableCell>
                     <span className="inline-flex items-center gap-1.5 text-sm">
                       <Mail className="size-3.5 text-muted-foreground" />
-                      {user.email}
+                      {truncateText(user.email)}
                     </span>
                   </TableCell>
 
