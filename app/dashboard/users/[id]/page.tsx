@@ -81,12 +81,10 @@ const formatDate = (value?: string) => {
   if (!value) return "N/A";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "N/A";
-  return date.toLocaleString("en-US", {
+  return date.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 };
 
@@ -94,12 +92,10 @@ const formatPostDate = (unix?: number) => {
   if (!unix) return "N/A";
   const date = new Date(unix * 1000);
   if (Number.isNaN(date.getTime())) return "N/A";
-  return date.toLocaleString("en-US", {
+  return date.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 };
 

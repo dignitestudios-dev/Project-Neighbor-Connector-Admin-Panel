@@ -43,15 +43,32 @@ const SkeletonRow = () => (
     ))}
   </TableRow>
 );
-
+const truncateText = (value: string | null | undefined, max = 24): string => {
+  if (!value) return "N/A";
+  if (value.length <= max) return value;
+  return `${value.slice(0, max)}...`;
+};
 const formatUsDate = (value?: string) => {
   if (!value) return "N/A";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "N/A";
+
   return date.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
+  });
+}
+const formatTime = (value?: string) => {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  
+    hour12: true,
   });
 };
 
@@ -92,7 +109,7 @@ export function PostsTable({
       </div>
 
       <div className="overflow-hidden rounded-xl border">
-        <Table className="table-fixed">
+        <Table className="">
           <TableHeader>
             <TableRow>
               <TableHead className="h-14 w-[210px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Title</TableHead>
@@ -100,6 +117,7 @@ export function PostsTable({
               <TableHead className="h-14 text-[11px] font-semibold uppercase tracking-wide text-primary/70">Description</TableHead>
               <TableHead className="h-14 w-[140px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Type</TableHead>
               <TableHead className="h-14 w-[130px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Created Date</TableHead>
+              <TableHead className="h-14 w-[130px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Created Time</TableHead>
               <TableHead className="h-14 w-[110px] text-[11px] font-semibold uppercase tracking-wide text-primary/70">Pinned</TableHead>
             </TableRow>
           </TableHeader>
@@ -117,7 +135,7 @@ export function PostsTable({
                   <TableCell className="font-medium">{post.title || "Untitled"}</TableCell>
                   <TableCell>{post.user?.name || "N/A"}</TableCell>
                   <TableCell className="truncate text-sm text-muted-foreground">
-                    {post.description || "N/A"}
+                    {truncateText(post.description || "N/A")}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="border-primary/40 text-primary">
@@ -125,6 +143,7 @@ export function PostsTable({
                     </Badge>
                   </TableCell>
                   <TableCell>{formatUsDate(post.createdAt)}</TableCell>
+                  <TableCell>{formatTime(post.createdAt)}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={post.isPinned ? "border-primary/40 text-primary" : "border-primary/40 text-primary/70"}>
                       {post.isPinned ? "Yes" : "No"}

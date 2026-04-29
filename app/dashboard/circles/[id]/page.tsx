@@ -289,9 +289,9 @@ export default function CircleDetailPage() {
                 <br />
                 <p className="mt-1 inline-flex items-center gap-2 text-sm text-muted-foreground">
                   Invite Code: {circleDetail?.inviteCode || "N/A"}
-                  <button onClick={handleInviteUpdate} disabled={inviteLoading} className="cursor-pointer">
+                  {/* <button onClick={handleInviteUpdate} disabled={inviteLoading} className="cursor-pointer">
                     <RefreshCw className={`h-4 w-4 text-primary ${inviteLoading ? "animate-spin" : ""}`} />
-                  </button>
+                  </button> */}
                 </p>
               </div>
             </div>

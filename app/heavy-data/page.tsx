@@ -30,7 +30,11 @@ export default function HeavyDataPage() {
           email: `user${i}@example.com`,
           amount: Math.floor(Math.random() * 10000),
           status: statuses[Math.floor(Math.random() * statuses.length)],
-          date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: 'numeric',
+          }),
         });
       }
       return items;
