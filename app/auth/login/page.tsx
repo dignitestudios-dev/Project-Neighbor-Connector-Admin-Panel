@@ -11,6 +11,7 @@ import { useFormik } from "formik";
 import { loginUser } from "@/lib/slices/authSlice";
 import { signInSchema } from "@/lib/validation/authschema";
 import type { AppDispatch } from "@/lib/store";
+import { toast, Toaster } from "sonner";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -38,21 +39,27 @@ const Login = () => {
         // Redux login
         await dispatch(loginUser(payload)).unwrap();
      
-
+        toast.success("Login successful!");
         // Login success → navigate
       
       } catch (err: any) {
-        // API error
-        resetForm();
-        setErrors({ email: err?.message || "Login failed" });
-        setSubmitting(false);
-        
-      }
+  resetForm();
+  setSubmitting(false);
+
+  
+
+  // Formik error (input ke niche show hoga)
+  setErrors(err);
+
+   const message = err?.message || err || "Something went wrong";
+    toast.error(message);
+}
     },
   });
 
   return (
     <div className="w-full max-w-md mx-auto mt-12">
+      <Toaster />
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
         <p className="text-gray-600">Sign in to your account</p>
@@ -96,7 +103,7 @@ const Login = () => {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
             >
-              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
             </button>
           </div>
           {formik.touched.password && formik.errors.password && (

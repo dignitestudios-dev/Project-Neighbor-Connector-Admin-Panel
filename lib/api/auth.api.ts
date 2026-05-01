@@ -40,30 +40,33 @@ export const logout = async () => {
 
 // import { API } from './axios'; // your axios instance
 
-export const forgotPassword = async (email: string) => {
+export const forgotPassword = async (email: string, role: string) => {
   try {
-    const response = await API.post('/auth/forgot', { email });
-    // The API should return a message like "Password reset link sent"
+    const response = await API.post("/auth/forgot", { email, role });
     return response.data;
   } catch (error: any) {
-    // Handle errors
-    throw new Error(error.response?.data?.message || 'Failed to send reset link');
+    const message =
+      error?.response?.data?.message ||
+      "Failed to send reset link";
+
+    throw new Error(message);
   }
 };
 
-export const verifyOTP = async (otp: number, email: string) => {
+export const verifyOTPAPI = async (otp: number, email: string  ,role : string) => {
   try {
-    const response = await API.post('/admin/auth/verifyOTP', { otp, email });
+    const response = await API.post('/auth/verifyOTPController', { otp, email, role:"admin" });
     Cookies.set('authToken', response.data.data.token, { expires: 7,});
     return response.data;
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || 'Failed to verify OTP');
+    console.log("error", error.response.data.message);
+    throw new Error(error.response.data.message);
   }
 };
 
-export const updatePassword = async (password: string) => {
+export const updatePassword = async (password: string ) => {
   try {
-    const response = await API.post('/admin/updatePassword', { password });
+    const response = await API.post('/auth/updatePassword', { password });
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Failed to update password');

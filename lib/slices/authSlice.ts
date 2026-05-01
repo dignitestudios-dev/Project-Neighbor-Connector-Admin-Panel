@@ -1,13 +1,20 @@
 // lib/slices/authSlice.ts
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { login as loginAPI, forgotPassword as forgotPasswordAPI, verifyOTP as verifyOTPAPI , updatePassword as updatePasswordAPI } from '../api/auth.api'; // tumhara API file
-import Cookies from 'js-cookie';
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import {
+  login as loginAPI,
+  forgotPassword as forgotPasswordAPI,
+ 
+  updatePassword as updatePasswordAPI,
+  verifyOTPAPI,
+} from "../api/auth.api"; // tumhara API file
+import Cookies from "js-cookie";
 
 // ------------------ Types ------------------
 export interface User {
   id: number;
   name: string;
   email: string;
+  role: string;
 }
 
 interface AuthState {
@@ -30,63 +37,67 @@ const initialState: AuthState = {
 // ------------------ Async Thunks ------------------
 
 // Login user
-export const loginUser  = createAsyncThunk<User, { email: string; password: string }>(
-  'auth/login',
-  async (credentials, thunkAPI) => {
-    try {
-      const data = await loginAPI(credentials); // API call
-      console.log(data,"data-messages")
-      return data?.data?.admin; // API se user info return
-    } catch (err: any) {
-      return thunkAPI.rejectWithValue(err.response?.data?.message || 'Login failed');
-    }
+export const loginUser = createAsyncThunk<
+  User,
+  { email: string; password: string }
+>("auth/login", async (credentials, thunkAPI) => {
+  try {
+    const data = await loginAPI(credentials); // API call
+    console.log(data, "data-messages");
+    return data?.data?.admin; // API se user info return
+  } catch (err: any) {
+    return thunkAPI.rejectWithValue(
+      err.response?.data?.message || "Login failed",
+    );
   }
-);
+});
 
-export const forgotPassword = createAsyncThunk<void, { email: string }>(
-  'auth/forgotPassword',
-  async (credentials, thunkAPI) => {
-    try {
-      await forgotPasswordAPI(credentials.email);
-    } catch (err: any) {
-      return thunkAPI.rejectWithValue(err.response?.data?.message || 'Failed to send reset link');
-    }
+export const forgotPassword = createAsyncThunk<
+  void,
+  { email: string; role: string }
+>("auth/forgotPassword", async (credentials, thunkAPI) => {
+  try {
+    await forgotPasswordAPI(credentials.email, credentials.role);
+  } catch (err: any) {
+    return thunkAPI.rejectWithValue(err?.message || "Failed to send link");
   }
-);
+});
 
 export const verifyOTP = createAsyncThunk<void, { otp: any; email: string }>(
-  'auth/verifyOTP',
+  "auth/verifyOTP",
   async (credentials, thunkAPI) => {
     try {
-      await verifyOTPAPI(credentials.otp, credentials.email);
+      await verifyOTPAPI(credentials.otp, credentials.email, "admin");
     } catch (err: any) {
-      return thunkAPI.rejectWithValue(err.response?.data?.message || 'Failed to verify OTP');
+      return thunkAPI.rejectWithValue(err.message || "Failed to verify OTP");
     }
-  }
+  },
 );
- 
+
 export const updatePassword = createAsyncThunk<void, { password: string }>(
-  'auth/updatePassword',
+  "auth/updatePassword",
   async (credentials, thunkAPI) => {
     try {
       await updatePasswordAPI(credentials.password);
     } catch (err: any) {
-      return thunkAPI.rejectWithValue(err.response?.data?.message || 'Failed to update password');
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || "Failed to update password",
+      );
     }
-  }
+  },
 );
 
 // ------------------ Slice ------------------
 const authSlice = createSlice({
   name: "auth",
   initialState,
-    reducers: {
+  reducers: {
     logout: (state) => {
-            state.user = null;
-            state.isAuthenticated = false;
-            state.loading = false;
-            state.error = null;
-          Cookies.remove("authToken");
+      state.user = null;
+      state.isAuthenticated = false;
+      state.loading = false;
+      state.error = null;
+      Cookies.remove("authToken");
     },
     setEmail: (state, action: PayloadAction<string>) => {
       state.email = action.payload;
@@ -108,6 +119,20 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.error = action.payload as string;
     });
+    // Verify OTP
+    builder.addCase(verifyOTP.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+
+    builder.addCase(verifyOTP.fulfilled, (state) => {
+      state.loading = false;
+    });
+
+    builder.addCase(verifyOTP.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
 
     // Forgot password
     builder.addCase(forgotPassword.pending, (state) => {
@@ -122,25 +147,22 @@ const authSlice = createSlice({
       state.error = action.payload as string;
     });
 
-// update password 
-builder.addCase (updatePassword.pending, (state) => {
-  state.loading = true;
-  state.error = null;
-});
+    // update password
+    builder.addCase(updatePassword.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
 
-builder.addCase (updatePassword.fulfilled, (state) => {
-  state.loading = false;
-});
+    builder.addCase(updatePassword.fulfilled, (state) => {
+      state.loading = false;
+    });
 
-builder.addCase (updatePassword.rejected, (state, action) => {
-  state.loading = false;
-  state.error = action.payload as string;
-});
-
+    builder.addCase(updatePassword.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
   },
 });
-
-
 
 // ------------------ Exports ------------------
 export const { logout, setEmail } = authSlice.actions;

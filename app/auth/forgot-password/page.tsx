@@ -11,6 +11,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { AppDispatch, RootState } from "@/lib/store";
 import { forgotPassword, setEmail } from "@/lib/slices/authSlice";
+import { toast, Toaster } from "sonner";
 
 const ForgotPassword = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -20,23 +21,31 @@ const ForgotPassword = () => {
   const validationSchema = Yup.object({
     email: Yup.string().email("Invalid email address").required("Email is required"),
   });
+const formik = useFormik({
+  initialValues: { email: "" },
+  validationSchema,
+  onSubmit: async (values) => {
+    try {
+      await dispatch(
+        forgotPassword({
+          email: values.email,
+          role: "admin",
+        })
+      ).unwrap();
 
-  const formik = useFormik({
-    initialValues: { email: "" },
-    validationSchema,
-    onSubmit: async (values) => {
-      try {
-        await dispatch(forgotPassword({ email: values.email })).unwrap();
-        dispatch(setEmail(values.email));
-        router.push("/auth/verification");
-      } catch (err) {
-        console.log("Forgot password error:", err);
-      }
-    },
-  });
+      dispatch(setEmail(values.email));
+      router.push("/auth/verification");
+      toast.success("OTP sent successfully");
+    } catch (err: any) {
+  const message = err?.message || err || "Something went wrong";
+  toast.error(message);
+}
+  },
+});
 
   return (
     <div className="w-full max-w-md mx-auto mt-12">
+      <Toaster/>
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Forgot Password</h2>
         <p className="text-gray-600">
@@ -63,7 +72,7 @@ const ForgotPassword = () => {
         </div>
 
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Sending..." : "Send Reset Link"}
+          {loading ? "Sending..." : "Send OTP"}
         </Button>
 
         <div className="text-center">

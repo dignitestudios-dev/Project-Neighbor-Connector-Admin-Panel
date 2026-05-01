@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { fetchDashboardStats, fetchDashboardCharts } from "@/lib/slices/dashboardSlice";
 import { AppDispatch, RootState } from "@/lib/store";
 import HeavyChartsPage from "../heavy-charts/page";
-import { CalendarDays, CheckCircle2, CircleDot, Users } from "lucide-react";
+import { CalendarDays, CheckCircle, CheckCircle2, CircleDot, Users } from "lucide-react";
 
 const DashboardStatsSkeleton = () => (
   <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -64,7 +64,7 @@ export default function DashboardPage() {
     { label: "Total Users", value: stats?.totalUser || 0, icon: Users, color: "text-primary" },
     { label: "Total Circles", value: stats?.totalCircle || 0, icon: CircleDot, color: "text-[var(--primary-blue)]" },
     { label: "Total Check In", value: stats?.totalCheckIn || 0, icon: CheckCircle2, color: "text-primary" },
-    { label: "Total Check Out", value: stats?.totalCheckOut || 0, icon: CalendarDays, color: "text-[var(--primary-blue)]" },
+    // { label: "Total Check Out", value: stats?.totalCheckOut || 0, icon: CheckCircle , color: "text-[var(--primary-blue)]" },
   ];
 
   const statsLoading = !stats && loading;

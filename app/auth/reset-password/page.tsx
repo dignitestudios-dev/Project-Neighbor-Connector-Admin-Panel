@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useDispatch } from "react-redux";
 import { updatePassword } from "@/lib/slices/authSlice";
 import { AppDispatch } from "@/lib/store";
+import { toast, Toaster } from "sonner";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -43,12 +44,21 @@ const ResetPassword = () => {
     // Reset password logic here
     console.log("Password reset with:", password);
     
-    await dispatch(updatePassword({ password }));
-    router.push("/auth/login");
+    try {
+      await dispatch(updatePassword({ password }));
+      setTimeout(() => {
+        router.push("/auth/login");
+        toast.success("Password reset successfully");
+      }, 1000);
+    } catch (error: any) {
+      setError(error.message || "Failed to reset password");
+      toast.error(error.message || "Failed to reset password");
+    }
   };
 
   return (
     <div className="w-full max-w-md">
+      <Toaster />
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Reset Password</h2>
         <p className="text-gray-600">
@@ -81,9 +91,9 @@ const ResetPassword = () => {
               className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
             >
               {showPassword ? (
-                <EyeOff className="h-5 w-5" />
-              ) : (
                 <Eye className="h-5 w-5" />
+              ) : (
+                <EyeOff className="h-5 w-5" />
               )}
             </button>
           </div>
@@ -107,9 +117,9 @@ const ResetPassword = () => {
               className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
             >
               {showConfirmPassword ? (
-                <EyeOff className="h-5 w-5" />
-              ) : (
                 <Eye className="h-5 w-5" />
+              ) : (
+                <EyeOff className="h-5 w-5" />
               )}
             </button>
           </div>
