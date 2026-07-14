@@ -6,6 +6,7 @@ import {
   getUserPosts,
   getUserReported,
   getUserReports,
+  getUserSurvey,
   toggleUserBlock,
 } from "../api/user.api";
 
@@ -49,6 +50,7 @@ interface AsyncSectionLoading {
   posts: boolean;
   reported: boolean;
   reports: boolean;
+  survey: boolean;
 }
 
 interface UserState {
@@ -60,6 +62,7 @@ interface UserState {
   posts: any[];
   reportedPosts: any[];
   reportsAgainstUser: any[];
+  surveyData: any | null;
   postsPagination: Pagination | null;
   reportedPagination: Pagination | null;
   reportsPagination: Pagination | null;
@@ -82,6 +85,7 @@ const initialState: UserState = {
   posts: [],
   reportedPosts: [],
   reportsAgainstUser: [],
+  surveyData: null,
   postsPagination: null,
   reportedPagination: null,
   reportsPagination: null,
@@ -90,6 +94,7 @@ const initialState: UserState = {
     posts: false,
     reported: false,
     reports: false,
+    survey: false,
   },
 
   pagination: null,
@@ -216,6 +221,18 @@ export const toggleUserBlockStatus = createAsyncThunk(
     }
   }
 );
+
+export const fetchUserSurvey = createAsyncThunk(
+  "users/fetchUserSurvey",
+  async (id: string, thunkAPI) => {
+    try {
+      return await getUserSurvey(id);
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  }
+);
+
 // ---------------- SLICE ----------------
 
 const userSlice = createSlice({
@@ -228,6 +245,7 @@ const userSlice = createSlice({
       state.reportedPosts = [];
       state.reportsAgainstUser = [];
       state.emergencyContacts = [];
+      state.surveyData = null;
       state.postsPagination = null;
       state.reportedPagination = null;
       state.reportsPagination = null;
@@ -236,6 +254,7 @@ const userSlice = createSlice({
         posts: false,
         reported: false,
         reports: false,
+        survey: false,
       };
     },
   },
@@ -324,6 +343,19 @@ const userSlice = createSlice({
       .addCase(fetchUserReports.rejected, (state) => {
         state.sectionLoading.reports = false;
       });
+
+    builder
+      .addCase(fetchUserSurvey.pending, (state) => {
+        state.sectionLoading.survey = true;
+      })
+      .addCase(fetchUserSurvey.fulfilled, (state, action) => {
+        state.sectionLoading.survey = false;
+        state.surveyData = action.payload?.data || null;
+      })
+      .addCase(fetchUserSurvey.rejected, (state) => {
+        state.sectionLoading.survey = false;
+      });
+
     builder.addCase(toggleUserBlockStatus.fulfilled, (state, action) => {
       const updatedUser = action.payload;
 

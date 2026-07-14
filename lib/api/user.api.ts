@@ -108,3 +108,14 @@ export const toggleUserBlock = async (id: string, toggle: boolean) => {
     throw new Error(getApiErrorMessage(error, "Failed to toggle user block"));
   }
 };
+
+// ✅ User Survey
+export const getUserSurvey = async (id: string) => {
+  try {
+    const response = await API.get(`/admin/user/${id}/survey`);
+    return response.data;
+  } catch (error: unknown) {
+    throw new Error(getApiErrorMessage(error, "Failed to fetch survey"));
+  }
+};
+

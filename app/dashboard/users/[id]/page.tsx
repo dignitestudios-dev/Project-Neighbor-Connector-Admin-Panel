@@ -10,6 +10,7 @@ import {
   fetchUserPosts,
   fetchUserReported,
   fetchUserReports,
+  fetchUserSurvey,
   toggleUserBlockStatus,
 } from "@/lib/slices/userSlice";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Phone, ShieldAlert } from "lucide-react";
 
-type Tab = "emergency" | "posts" | "reported" | "reports";
+type Tab = "emergency" | "posts" | "reported" | "reports" | "survey";
 
 type PaginationInfo = {
   currentPage: number;
@@ -68,6 +69,14 @@ type ReportItem = {
   reportedBy?: unknown;
 };
 
+type SurveyItem = {
+  _id: string;
+  question: string;
+  answer: string;
+  category?: string;
+  createdAt?: string;
+};
+
 const PAGE_SIZE = 10;
 
 const tabs: { key: Tab; label: string }[] = [
@@ -75,6 +84,7 @@ const tabs: { key: Tab; label: string }[] = [
   { key: "posts", label: "Posts" },
   { key: "reported", label: "Reported By User" },
   { key: "reports", label: "Reports Against User" },
+  { key: "survey", label: "Survey" },
 ];
 
 const formatDate = (value?: string) => {
@@ -165,54 +175,54 @@ function ReportEntityCard({ item }: { item: ReportItem }) {
   const userView =
     model === "User"
       ? {
-          title: (entity.name as string) || "Unknown user",
-          fields: [
-            { label: "Email", value: (entity.email as string) || "N/A" },
-            { label: "Phone", value: (entity.phone as string) || "N/A" },
-            { label: "Address", value: (entity.address as string) || "N/A" },
-            { label: "Bio", value: (entity.bio as string) || "N/A" },
-          ],
-        }
+        title: (entity.name as string) || "Unknown user",
+        fields: [
+          { label: "Email", value: (entity.email as string) || "N/A" },
+          { label: "Phone", value: (entity.phone as string) || "N/A" },
+          { label: "Address", value: (entity.address as string) || "N/A" },
+          { label: "Bio", value: (entity.bio as string) || "N/A" },
+        ],
+      }
       : null;
 
   const postView =
     model === "Post"
       ? {
-          title: (entity.title as string) || "Untitled post",
-          fields: [
-            { label: "Type", value: (entity.type as string) || "N/A" },
-            { label: "Description", value: (entity.description as string) || "N/A" },
-            { label: "Address", value: (entity.address as string) || "N/A" },
-            { label: "Frequency", value: entity.frequency ? String(entity.frequency) : "N/A" },
-            {
-              label: "Occurrence",
-              value: typeof entity.occurrence === "number" ? String(entity.occurrence) : "N/A",
-            },
-          ],
-        }
+        title: (entity.title as string) || "Untitled post",
+        fields: [
+          { label: "Type", value: (entity.type as string) || "N/A" },
+          { label: "Description", value: (entity.description as string) || "N/A" },
+          { label: "Address", value: (entity.address as string) || "N/A" },
+          { label: "Frequency", value: entity.frequency ? String(entity.frequency) : "N/A" },
+          {
+            label: "Occurrence",
+            value: typeof entity.occurrence === "number" ? String(entity.occurrence) : "N/A",
+          },
+        ],
+      }
       : null;
 
   const commentView =
     model === "Comment"
       ? {
-          title: "Comment",
-          fields: [
-            { label: "Description", value: (entity.description as string) || "N/A" },
-            { label: "Likes", value: typeof entity.likes === "number" ? String(entity.likes) : "N/A" },
-            {
-              label: "Replies",
-              value: typeof entity.replies === "number" ? String(entity.replies) : "N/A",
-            },
-          ],
-        }
+        title: "Comment",
+        fields: [
+          { label: "Description", value: (entity.description as string) || "N/A" },
+          { label: "Likes", value: typeof entity.likes === "number" ? String(entity.likes) : "N/A" },
+          {
+            label: "Replies",
+            value: typeof entity.replies === "number" ? String(entity.replies) : "N/A",
+          },
+        ],
+      }
       : null;
 
   const circleView =
     model === "Circle"
       ? {
-          title: (entity.name as string) || "Circle",
-          fields: [{ label: "Invite Code", value: entity.inviteCode ? String(entity.inviteCode) : "N/A" }],
-        }
+        title: (entity.name as string) || "Circle",
+        fields: [{ label: "Invite Code", value: entity.inviteCode ? String(entity.inviteCode) : "N/A" }],
+      }
       : null;
 
   const view = userView || postView || commentView || circleView;
@@ -265,6 +275,7 @@ export default function UserDetailPage() {
     reportedPagination,
     reportsPagination,
     sectionLoading,
+    surveyData,
   } = useSelector((state: RootState) => state.users);
 
   const [activeTab, setActiveTab] = useState<Tab>("emergency");
@@ -289,6 +300,9 @@ export default function UserDetailPage() {
     }
     if (activeTab === "reports") {
       dispatch(fetchUserReports({ id, page: reportsPage, limit: PAGE_SIZE }));
+    }
+    if (activeTab === "survey") {
+      dispatch(fetchUserSurvey(id));
     }
   }, [activeTab, id, postsPage, reportedPage, reportsPage, dispatch]);
 
@@ -315,6 +329,7 @@ export default function UserDetailPage() {
     posts: (posts as UserPost[])?.length ?? 0,
     reported: (reportedPosts as ReportItem[])?.length ?? 0,
     reports: (reportsAgainstUser as ReportItem[])?.length ?? 0,
+    survey: Array.isArray(surveyData) ? surveyData.length : surveyData ? 1 : 0,
   };
 
   if (detailLoading && !userDetail) {
@@ -373,8 +388,8 @@ export default function UserDetailPage() {
                 {blockLoading
                   ? "Updating..."
                   : userDetail?.isDeactivatedByAdmin
-                  ? "Unblock User"
-                  : "Block User"}
+                    ? "Unblock User"
+                    : "Block User"}
               </Button>
             </div>
           </div>
@@ -393,16 +408,15 @@ export default function UserDetailPage() {
         </section>
 
         <section className="overflow-hidden rounded-2xl border">
-          <div className="grid grid-cols-2 border-b md:grid-cols-4">
+          <div className="grid grid-cols-2 border-b md:grid-cols-5">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-3 text-sm font-medium transition ${
-                  activeTab === tab.key
-                    ? "border-b-2 border-primary text-primary"
-                    : "text-muted-foreground hover:text-primary"
-                }`}
+                className={`px-4 py-3 text-sm font-medium transition ${activeTab === tab.key
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-muted-foreground hover:text-primary"
+                  }`}
                 style={
                   activeTab === tab.key
                     ? { borderColor: "var(--primary-blue)", color: "var(--primary-blue)" }
@@ -503,6 +517,82 @@ export default function UserDetailPage() {
                   onPrev={() => setReportsPage((prev) => Math.max(prev - 1, 1))}
                   onNext={() => setReportsPage((prev) => prev + 1)}
                 />
+              </TabState>
+            )}
+
+            {activeTab === "survey" && (
+              <TabState loading={sectionLoading.survey} empty={!tabCounts.survey}>
+                {(() => {
+                  const surveys = surveyData as SurveyItem[];
+                  if (!surveys || surveys.length === 0) return null;
+
+                  const survey1 = surveys.filter((s) => s.category === "new-user");
+                  const survey2 = surveys.filter((s) => s.category === "user");
+
+                  return (
+                    <div className="space-y-8">
+                      {survey1.length > 0 && (
+                        <div className="rounded-2xl border bg-white p-6 shadow-sm">
+                          <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b pb-4">
+                            <h2 className="text-xl font-bold" style={{ color: "var(--primary-blue)" }}>
+                              Survey 1: New User
+                            </h2>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Submitted On:</span>
+                              <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 border-none px-3 py-1 text-sm">
+                                {formatDate(survey1[0]?.createdAt)}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="grid gap-4 md:grid-cols-2">
+                            {survey1.map((item) => (
+                              <div key={item._id} className="flex flex-col justify-between rounded-xl border border-gray-100 bg-gray-50/50 p-5 transition hover:shadow-sm">
+                                <div>
+                                  <h3 className="text-[15px] font-semibold leading-snug text-gray-800">{item.question || "N/A"}</h3>
+                                </div>
+                                <div className="mt-4 rounded-lg bg-white p-4 shadow-sm border border-primary/10">
+                                  <p className="text-[15px] font-medium text-primary" style={{ color: "var(--primary-blue)" }}>
+                                    {item.answer || "No answer provided"}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {survey2.length > 0 && (
+                        <div className="rounded-2xl border bg-white p-6 shadow-sm">
+                          <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b pb-4">
+                            <h2 className="text-xl font-bold" style={{ color: "var(--primary-blue)" }}>
+                              Survey 2: Existing User
+                            </h2>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Submitted On:</span>
+                              <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 border-none px-3 py-1 text-sm">
+                                {formatDate(survey2[0]?.createdAt)}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="grid gap-4 md:grid-cols-2">
+                            {survey2.map((item) => (
+                              <div key={item._id} className="flex flex-col justify-between rounded-xl border border-gray-100 bg-gray-50/50 p-5 transition hover:shadow-sm">
+                                <div>
+                                  <h3 className="text-[15px] font-semibold leading-snug text-gray-800">{item.question || "N/A"}</h3>
+                                </div>
+                                <div className="mt-4 rounded-lg bg-white p-4 shadow-sm border border-primary/10">
+                                  <p className="text-[15px] font-medium text-primary" style={{ color: "var(--primary-blue)" }}>
+                                    {item.answer || "No answer provided"}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </TabState>
             )}
           </div>
