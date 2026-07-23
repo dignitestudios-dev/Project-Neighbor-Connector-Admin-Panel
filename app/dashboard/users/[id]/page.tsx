@@ -276,8 +276,9 @@ export default function UserDetailPage() {
     reportsPagination,
     sectionLoading,
     surveyData,
+    userCheckinfo,
   } = useSelector((state: RootState) => state.users);
-
+  console.log(userCheckinfo);
   const [activeTab, setActiveTab] = useState<Tab>("emergency");
   const [postsPage, setPostsPage] = useState(1);
   const [reportedPage, setReportedPage] = useState(1);
@@ -329,7 +330,9 @@ export default function UserDetailPage() {
     posts: (posts as UserPost[])?.length ?? 0,
     reported: (reportedPosts as ReportItem[])?.length ?? 0,
     reports: (reportsAgainstUser as ReportItem[])?.length ?? 0,
-    survey: Array.isArray(surveyData) ? surveyData.length : surveyData ? 1 : 0,
+    survey:
+      (Array.isArray(surveyData?.["new-user"]) ? surveyData["new-user"].length : 0) +
+      (Array.isArray(surveyData?.["user"]) ? surveyData["user"].length : 0),
   };
 
   if (detailLoading && !userDetail) {
@@ -374,11 +377,9 @@ export default function UserDetailPage() {
 
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="border-primary/40 text-primary">
-                {userDetail?.accountStatus || "Active"}
+                {userCheckinfo?.isActive ? "Active" : "Inactive"}
               </Badge>
-              <Badge variant="outline" className="border-primary/40 text-primary">
-                Last check-in: {userDetail?.lastCheckInStatus || "N/A"}
-              </Badge>
+
               <Button
                 onClick={handleToggleBlock}
                 disabled={blockLoading || detailLoading}
@@ -394,11 +395,23 @@ export default function UserDetailPage() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-4 rounded-xl border p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-5 grid gap-3 rounded-xl border p-4 sm:grid-cols-2 xl:grid-cols-4">
             <InfoRow label="Address" value={userDetail?.homeAddress || userDetail?.address || "N/A"} />
-            <InfoRow label="Joined Group" value={userDetail?.joinedGroup ? "Yes" : "No"} />
+            <InfoRow label="Joined Group" value={userDetail?.joinedCount ? String(userDetail.joinedCount) : "Not Joined"} />
+            <InfoRow label="Notified Status" value={userCheckinfo?.notified ? "Yes" : "No"} />
+            <InfoRow label="Missed Count" value={userCheckinfo?.missedCount || 0} />
+
+          </div>
+
+          <div className="mt-5 grid gap-3 rounded-xl border p-4 sm:grid-cols-2 xl:grid-cols-4">
+
+            <InfoRow label="Next Check-in Due Date" value={formatDate(userCheckinfo?.nextCheckInDueAt)} />
+
             <InfoRow label="Joined On" value={formatDate(userDetail?.createdAt)} />
             <InfoRow label="Updated On" value={formatDate(userDetail?.updatedAt)} />
+            <InfoRow label="Last Check-In Date" value={formatDate(userCheckinfo?.lastCheckInAt || '')} />
+
+
           </div>
           {userDetail?.bio && (
             <p className="mt-4 rounded-lg border p-3 text-sm">
@@ -523,11 +536,14 @@ export default function UserDetailPage() {
             {activeTab === "survey" && (
               <TabState loading={sectionLoading.survey} empty={!tabCounts.survey}>
                 {(() => {
-                  const surveys = surveyData as SurveyItem[];
-                  if (!surveys || surveys.length === 0) return null;
+                  const survey1: SurveyItem[] = Array.isArray(surveyData?.["new-user"])
+                    ? surveyData["new-user"]
+                    : [];
+                  const survey2: SurveyItem[] = Array.isArray(surveyData?.["user"])
+                    ? surveyData["user"]
+                    : [];
 
-                  const survey1 = surveys.filter((s) => s.category === "new-user");
-                  const survey2 = surveys.filter((s) => s.category === "user");
+                  if (survey1.length === 0 && survey2.length === 0) return null;
 
                   return (
                     <div className="space-y-8">

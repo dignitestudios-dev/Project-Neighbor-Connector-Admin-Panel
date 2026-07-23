@@ -36,6 +36,8 @@ export interface ApiUser {
   createdAt?: string; // ISO date string
   updatedAt?: string; // ISO date string
   __v?: number;
+  isJoined?: boolean;
+  joinedCount?: number;
 }
 
 interface Pagination {
@@ -259,7 +261,7 @@ const userSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    
+
     // ===== USERS LIST =====
     builder
       .addCase(fetchUsers.pending, (state) => {
